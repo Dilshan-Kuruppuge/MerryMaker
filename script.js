@@ -12,24 +12,65 @@ const canvas = new fabric.Canvas('c', {
 
 // Responsive fitting: keep a logical canvas size (canvasW x canvasH)
 // and scale the rendered view to fit the available container without scrolling.
+let baseScale = 1;     // scale determined by container size
+let userScale = 1;     // extra user-controlled scale (pinch zoom)
+const MAX_TOTAL_SCALE = 2.5;
+const MIN_USER_SCALE = 0.5;
+const MIN_BASE_SCALE = 0.4; // prevent canvas becoming unusably small
+
 function fitCanvasToViewport() {
     const container = document.getElementById('canvas-container');
     if (!container || !canvas) return;
-    const rect = container.getBoundingClientRect();
-    const availW = Math.max(1, rect.width - 20); // account for padding
-    const availH = Math.max(1, rect.height - 20);
-    // Allow upscaling on larger screens; cap with a sensible max to avoid huge zooms
-    const maxScale = 2.5;
-    const scale = Math.min(availW / canvasW, availH / canvasH, maxScale);
-    // Set the element size to the scaled logical size
-    canvas.setWidth(Math.round(canvasW * scale));
-    canvas.setHeight(Math.round(canvasH * scale));
-    canvas.setZoom(scale);
+    // Use clientWidth to get width; compute available height by
+    // reserving space for the top bar and bottom toolbar so those
+    // UI elements remain visible and the canvas doesn't shrink under them.
+    const availW = Math.max(1, container.clientWidth - 20); // account for padding
+    const viewportH = window.innerHeight || document.documentElement.clientHeight;
+    const topBar = document.getElementById('top-bar');
+    const bottomBar = document.getElementById('bottom-toolbar');
+    const drawer = document.getElementById('sticker-drawer');
+    const topH = topBar ? topBar.getBoundingClientRect().height : 0;
+    const bottomH = bottomBar ? bottomBar.getBoundingClientRect().height : 0;
+    // If drawer is visible (not hidden), subtract its visible height so canvas isn't covered
+    let drawerH = 0;
+    if (drawer && !drawer.classList.contains('hidden')) {
+        // Prefer bounding height but cap to 60% of viewport
+        const dh = drawer.getBoundingClientRect().height || Math.round(viewportH * 0.5);
+        drawerH = Math.min(dh, Math.round(viewportH * 0.6));
+    }
+    const extraReserve = 12; // small breathing room
+    const availH = Math.max(100, viewportH - topH - bottomH - drawerH - extraReserve);
+    // Compute a base scale that fits the logical canvas into available space
+    baseScale = Math.min(availW / canvasW, availH / canvasH);
+    // avoid extremely large base scales; leave room for userScale to increase
+    baseScale = Math.min(baseScale, MAX_TOTAL_SCALE);
+    // avoid making the base scale too small which hides controls; clamp to a minimum
+    baseScale = Math.max(baseScale, MIN_BASE_SCALE);
+    // Update element size to match base scale
+    canvas.setWidth(Math.round(canvasW * baseScale));
+    canvas.setHeight(Math.round(canvasH * baseScale));
+    // Apply combined zoom (baseScale * userScale), capped to MAX_TOTAL_SCALE
+    const totalZoom = Math.min(baseScale * userScale, MAX_TOTAL_SCALE);
+    canvas.setZoom(totalZoom);
     canvas.calcOffset();
     canvas.requestRenderAll();
 }
 
 window.addEventListener('resize', fitCanvasToViewport);
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', fitCanvasToViewport);
+    window.visualViewport.addEventListener('scroll', fitCanvasToViewport);
+}
+window.addEventListener('orientationchange', fitCanvasToViewport);
+
+// Use ResizeObserver on the container to reliably detect height/width changes
+try {
+    const containerEl = document.getElementById('canvas-container');
+    if (containerEl && typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(() => fitCanvasToViewport());
+        ro.observe(containerEl);
+    }
+} catch (e) { /* ignore if ResizeObserver unavailable */ }
 
 // --- Undo/Redo history & autosave ---
 const history = [];
@@ -349,6 +390,61 @@ function toggleDrawer() {
     document.getElementById('sticker-drawer').classList.toggle('hidden');
     // Re-fit canvas when drawer visibility changes (container space may change)
     setTimeout(fitCanvasToViewport, 220);
+}
+
+// --------- Touch pinch-to-zoom support (two-finger gestures) ---------
+let isTouchScaling = false;
+let touchStartDistance = 0;
+let initialUserScale = 1;
+
+function getTouchDistance(t0, t1) {
+    const dx = t0.clientX - t1.clientX;
+    const dy = t0.clientY - t1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTouchMidpoint(t0, t1) {
+    return { clientX: (t0.clientX + t1.clientX) / 2, clientY: (t0.clientY + t1.clientY) / 2 };
+}
+
+// Attach touch handlers to the upper canvas element
+const upperEl = canvas.upperCanvasEl;
+if (upperEl) {
+    upperEl.addEventListener('touchstart', (ev) => {
+        if (!ev.touches || ev.touches.length < 2) return;
+        isTouchScaling = true;
+        touchStartDistance = getTouchDistance(ev.touches[0], ev.touches[1]);
+        initialUserScale = userScale;
+    }, { passive: true });
+
+    upperEl.addEventListener('touchmove', (ev) => {
+        if (!isTouchScaling) return;
+        if (!ev.touches || ev.touches.length < 2) return;
+        const d = getTouchDistance(ev.touches[0], ev.touches[1]);
+        if (touchStartDistance <= 0) return;
+        const factor = d / touchStartDistance;
+        // compute a candidate userScale, clamped so totalZoom won't exceed MAX_TOTAL_SCALE
+        const maxUser = Math.max(MIN_USER_SCALE, MAX_TOTAL_SCALE / Math.max(baseScale, 0.0001));
+        let candidate = initialUserScale * factor;
+        candidate = Math.max(MIN_USER_SCALE, Math.min(candidate, maxUser));
+        // compute total zoom and zoom to midpoint
+        const midpoint = getTouchMidpoint(ev.touches[0], ev.touches[1]);
+        const rect = upperEl.getBoundingClientRect();
+        const canvasPoint = new fabric.Point(midpoint.clientX - rect.left, midpoint.clientY - rect.top);
+        const totalZoom = Math.min(baseScale * candidate, MAX_TOTAL_SCALE);
+        userScale = candidate;
+        canvas.zoomToPoint(canvasPoint, totalZoom);
+        canvas.requestRenderAll();
+        ev.preventDefault();
+    }, { passive: false });
+
+    upperEl.addEventListener('touchend', (ev) => {
+        if (!isTouchScaling) return;
+        if (!ev.touches || ev.touches.length < 2) {
+            isTouchScaling = false;
+            touchStartDistance = 0;
+        }
+    }, { passive: true });
 }
 
 // Delete selected object(s) from the canvas
