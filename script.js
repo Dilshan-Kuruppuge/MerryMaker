@@ -10,6 +10,27 @@ const canvas = new fabric.Canvas('c', {
     selection: true,
 });
 
+// Responsive fitting: keep a logical canvas size (canvasW x canvasH)
+// and scale the rendered view to fit the available container without scrolling.
+function fitCanvasToViewport() {
+    const container = document.getElementById('canvas-container');
+    if (!container || !canvas) return;
+    const rect = container.getBoundingClientRect();
+    const availW = Math.max(1, rect.width - 20); // account for padding
+    const availH = Math.max(1, rect.height - 20);
+    // Allow upscaling on larger screens; cap with a sensible max to avoid huge zooms
+    const maxScale = 2.5;
+    const scale = Math.min(availW / canvasW, availH / canvasH, maxScale);
+    // Set the element size to the scaled logical size
+    canvas.setWidth(Math.round(canvasW * scale));
+    canvas.setHeight(Math.round(canvasH * scale));
+    canvas.setZoom(scale);
+    canvas.calcOffset();
+    canvas.requestRenderAll();
+}
+
+window.addEventListener('resize', fitCanvasToViewport);
+
 // --- Undo/Redo history & autosave ---
 const history = [];
 let historyIndex = -1;
@@ -144,6 +165,8 @@ window.onload = function() {
     });
     // If we didn't restore, push initial state
     if (!restored) pushHistory();
+    // Ensure canvas is sized to the viewport container
+    setTimeout(fitCanvasToViewport, 0);
 };
 
 // ------------------ Text toolbar logic ------------------
@@ -324,6 +347,8 @@ function populateDrawer() {
 
 function toggleDrawer() {
     document.getElementById('sticker-drawer').classList.toggle('hidden');
+    // Re-fit canvas when drawer visibility changes (container space may change)
+    setTimeout(fitCanvasToViewport, 220);
 }
 
 // Delete selected object(s) from the canvas

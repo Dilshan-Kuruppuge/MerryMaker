@@ -16,10 +16,9 @@
     <div id="top-bar">
         <span class="logo">🎄 MerryMaker</span>
         <div class="top-actions">
-            <button id="global-undo" class="save-btn">Undo ↶</button>
-            <button id="global-redo" class="save-btn">Redo ↷</button>
-            <button id="export-btn" class="save-btn">Export JSON</button>
-            <button id="save-btn" class="save-btn">Share ➔</button>
+            <button id="global-undo" class="save-btn" title="Undo" aria-label="Undo">↶</button>
+            <button id="global-redo" class="save-btn" title="Redo" aria-label="Redo">↷</button>
+            <button id="export-btn" class="save-btn" title="Export" aria-label="Export">Export</button>
         </div>
     </div>
 
@@ -35,6 +34,10 @@
         <button onclick="toggleDrawer()">
             <span>🎅</span>
             <small>Stickers</small>
+        </button>
+        <button id="save-btn" class="save-btn" title="Share" aria-label="Share" onclick="document.getElementById('save-btn') && document.getElementById('save-btn').click()">
+            <span>🔗</span>
+            <small>Share</small>
         </button>
     </div>
 
