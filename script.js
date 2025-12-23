@@ -396,6 +396,13 @@ function toggleDrawer() {
 let isTouchScaling = false;
 let touchStartDistance = 0;
 let initialUserScale = 1;
+// object-transform state (two-finger on selected object)
+let isObjectTransforming = false;
+let objectStartDistance = 0;
+let objectStartAngle = 0;
+let initialObjScaleX = 1;
+let initialObjScaleY = 1;
+let initialObjAngle = 0;
 
 function getTouchDistance(t0, t1) {
     const dx = t0.clientX - t1.clientX;
@@ -412,15 +419,49 @@ const upperEl = canvas.upperCanvasEl;
 if (upperEl) {
     upperEl.addEventListener('touchstart', (ev) => {
         if (!ev.touches || ev.touches.length < 2) return;
-        isTouchScaling = true;
-        touchStartDistance = getTouchDistance(ev.touches[0], ev.touches[1]);
-        initialUserScale = userScale;
+        const t0 = ev.touches[0], t1 = ev.touches[1];
+        const activeObj = canvas.getActiveObject();
+        if (activeObj) {
+            // Start object transform (scale + rotate)
+            isObjectTransforming = true;
+            isTouchScaling = false;
+            objectStartDistance = getTouchDistance(t0, t1);
+            objectStartAngle = Math.atan2(t1.clientY - t0.clientY, t1.clientX - t0.clientX);
+            initialObjScaleX = activeObj.scaleX || 1;
+            initialObjScaleY = activeObj.scaleY || 1;
+            initialObjAngle = activeObj.angle || 0;
+        } else {
+            // Start canvas pinch-zoom
+            isTouchScaling = true;
+            isObjectTransforming = false;
+            touchStartDistance = getTouchDistance(t0, t1);
+            initialUserScale = userScale;
+        }
     }, { passive: true });
 
     upperEl.addEventListener('touchmove', (ev) => {
-        if (!isTouchScaling) return;
         if (!ev.touches || ev.touches.length < 2) return;
-        const d = getTouchDistance(ev.touches[0], ev.touches[1]);
+        const t0 = ev.touches[0], t1 = ev.touches[1];
+        if (isObjectTransforming) {
+            const activeObj = canvas.getActiveObject();
+            if (!activeObj) return;
+            const d = getTouchDistance(t0, t1);
+            if (objectStartDistance <= 0) return;
+            const factor = d / objectStartDistance;
+            // Apply uniform scale based on factor
+            activeObj.set({ scaleX: initialObjScaleX * factor, scaleY: initialObjScaleY * factor });
+            // Rotation: compute angle delta
+            const ang = Math.atan2(t1.clientY - t0.clientY, t1.clientX - t0.clientX);
+            const deltaRad = ang - objectStartAngle;
+            const deltaDeg = deltaRad * 180 / Math.PI;
+            activeObj.set('angle', initialObjAngle + deltaDeg);
+            activeObj.setCoords();
+            canvas.requestRenderAll();
+            ev.preventDefault();
+            return;
+        }
+        if (!isTouchScaling) return;
+        const d = getTouchDistance(t0, t1);
         if (touchStartDistance <= 0) return;
         const factor = d / touchStartDistance;
         // compute a candidate userScale, clamped so totalZoom won't exceed MAX_TOTAL_SCALE
@@ -428,7 +469,7 @@ if (upperEl) {
         let candidate = initialUserScale * factor;
         candidate = Math.max(MIN_USER_SCALE, Math.min(candidate, maxUser));
         // compute total zoom and zoom to midpoint
-        const midpoint = getTouchMidpoint(ev.touches[0], ev.touches[1]);
+        const midpoint = getTouchMidpoint(t0, t1);
         const rect = upperEl.getBoundingClientRect();
         const canvasPoint = new fabric.Point(midpoint.clientX - rect.left, midpoint.clientY - rect.top);
         const totalZoom = Math.min(baseScale * candidate, MAX_TOTAL_SCALE);
@@ -439,6 +480,15 @@ if (upperEl) {
     }, { passive: false });
 
     upperEl.addEventListener('touchend', (ev) => {
+        if (isObjectTransforming) {
+            if (!ev.touches || ev.touches.length < 2) {
+                isObjectTransforming = false;
+                objectStartDistance = 0;
+                // record history for the object transform
+                schedulePushHistory(120);
+            }
+            return;
+        }
         if (!isTouchScaling) return;
         if (!ev.touches || ev.touches.length < 2) {
             isTouchScaling = false;
