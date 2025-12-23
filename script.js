@@ -1,7 +1,7 @@
 // 1. CANVAS INIT
-// Use a fixed 'card' size (a bit shorter than a phone screen)
-const canvasW = 360;
-const canvasH = 600;
+// Use a fixed 'card' size (shorter, even dimensions)
+const canvasW = 320;
+const canvasH = 480;
 
 const canvas = new fabric.Canvas('c', {
     width: canvasW,
