@@ -1,0 +1,399 @@
+// 1. CANVAS INIT
+// Use a fixed 'card' size (a bit shorter than a phone screen)
+const canvasW = 360;
+const canvasH = 600;
+
+const canvas = new fabric.Canvas('c', {
+    width: canvasW,
+    height: canvasH,
+    backgroundColor: '#ffffff',
+    selection: true,
+});
+
+// --- Undo/Redo history & autosave ---
+const history = [];
+let historyIndex = -1;
+const HISTORY_LIMIT = 80;
+let historyTimer = null;
+let isRestoring = false;
+
+function pushHistory() {
+    if (isRestoring) return;
+    try {
+        const snapshot = canvas.toJSON(['animateType']);
+        // drop forward history if we are mid-stack
+        if (historyIndex < history.length - 1) history.splice(historyIndex + 1);
+        history.push(snapshot);
+        if (history.length > HISTORY_LIMIT) history.shift();
+        historyIndex = history.length - 1;
+        updateUndoRedoButtons();
+        // also save draft immediately
+        localStorage.setItem('merrymaker-draft', JSON.stringify(snapshot));
+    } catch (e) { console.warn('pushHistory failed', e); }
+}
+
+function schedulePushHistory(delay = 600) {
+    // Don't schedule history pushes while restoring a snapshot
+    if (isRestoring) return;
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(() => pushHistory(), delay);
+}
+
+function loadHistoryState(idx) {
+    if (idx < 0 || idx >= history.length) return;
+    // Prevent any scheduled history pushes during restore
+    clearTimeout(historyTimer);
+    isRestoring = true;
+    const snapshot = history[idx];
+    historyIndex = idx;
+    // load JSON state without triggering history snapshots
+    canvas.loadFromJSON(snapshot, () => {
+        canvas.renderAll();
+        isRestoring = false;
+        updateUndoRedoButtons();
+    });
+    updateUndoRedoButtons();
+}
+
+function undo() {
+    if (historyIndex > 0) loadHistoryState(historyIndex - 1);
+}
+
+function redo() {
+    if (historyIndex < history.length - 1) loadHistoryState(historyIndex + 1);
+}
+
+function updateUndoRedoButtons() {
+    const gu = document.getElementById('global-undo');
+    const gr = document.getElementById('global-redo');
+    if (gu) {
+        const enable = historyIndex > 0;
+        gu.disabled = !enable;
+        gu.classList.toggle('inactive', !enable);
+        gu.classList.toggle('active', enable);
+    }
+    if (gr) {
+        const enable = historyIndex < history.length - 1;
+        gr.disabled = !enable;
+        gr.classList.toggle('inactive', !enable);
+        gr.classList.toggle('active', enable);
+    }
+}
+
+// Autosave interval - save current JSON to localStorage every 5s if changed
+setInterval(() => {
+    try { if (!isRestoring) localStorage.setItem('merrymaker-draft', JSON.stringify(canvas.toJSON(['animateType']))); } catch(e){}
+}, 5000);
+
+function loadDraftIfAny() {
+    const raw = localStorage.getItem('merrymaker-draft');
+    if (!raw) return false;
+    try {
+        const json = JSON.parse(raw);
+        isRestoring = true;
+        canvas.loadFromJSON(json, () => {
+            canvas.renderAll();
+            isRestoring = false;
+            // prime history with loaded draft
+            history.length = 0; historyIndex = -1;
+            pushHistory();
+        });
+        return true;
+    } catch (e) { console.warn('failed to load draft', e); return false; }
+}
+
+// 2. ASSETS (Your list)
+// Stickers are now external files; put them in a `stickers/` folder next to this HTML.
+// Each entry: { type: 'static'|'animated', url: 'relative-or-absolute-url', anim: 'rotate' }
+const stickers = [
+    { type: 'static', url: 'stickers/star.svg' },
+    { type: 'animated', url: 'stickers/blue-circle.svg', anim: 'rotate' }
+];
+
+window.onload = function() {
+    // Try to restore a draft; otherwise start fresh
+    const restored = loadDraftIfAny();
+    // Always populate sticker drawer
+    populateDrawer();
+    // Wire canvas selection events for text toolbar
+    setupTextToolbar();
+    // wire change events to push history
+    canvas.on('object:added', () => schedulePushHistory(300));
+    canvas.on('object:removed', () => schedulePushHistory(300));
+    canvas.on('object:modified', () => schedulePushHistory(300));
+    // wire global undo/redo header buttons
+    const gu = document.getElementById('global-undo');
+    const gr = document.getElementById('global-redo');
+    if (gu) gu.addEventListener('click', undo);
+    if (gr) gr.addEventListener('click', redo);
+    // wire delete button
+    const delBtn = document.getElementById('delete-btn');
+    if (delBtn) delBtn.addEventListener('click', deleteSelected);
+    // keybinding for Delete/Backspace to remove selected objects (when not editing inputs)
+    window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) return;
+        const activeObj = canvas.getActiveObject();
+        if (activeObj && activeObj.isEditing) return;
+        // if nothing selected, ignore
+        const objs = canvas.getActiveObjects ? canvas.getActiveObjects() : (activeObj ? [activeObj] : []);
+        if (!objs || objs.length === 0) return;
+        deleteSelected();
+        e.preventDefault();
+    });
+    // If we didn't restore, push initial state
+    if (!restored) pushHistory();
+};
+
+// ------------------ Text toolbar logic ------------------
+function setupTextToolbar() {
+    canvas.on('selection:created', handleSelection);
+    canvas.on('selection:updated', handleSelection);
+    canvas.on('selection:cleared', () => { hideTextToolbar(); });
+    canvas.on('object:modified', (e) => { if (canvas.getActiveObject()) updateToolbarPosition(canvas.getActiveObject()); });
+
+    // DOM bindings
+    const contentInput = document.getElementById('text-content');
+    const fontSelect = document.getElementById('font-family');
+    const colorInput = document.getElementById('font-color');
+    const boldBtn = document.getElementById('bold-btn');
+    const italicBtn = document.getElementById('italic-btn');
+    const alignSelect = document.getElementById('text-align');
+    const closeBtn = document.getElementById('toolbar-close');
+    const fontPreview = document.getElementById('font-preview');
+
+    function applyToActive(cb) {
+        const obj = canvas.getActiveObject();
+        if (!obj) return;
+        // Accept any object with a `text` property (IText, Textbox, Text)
+        if (typeof obj.text === 'undefined') return;
+        cb(obj);
+        obj.setCoords();
+        canvas.requestRenderAll();
+    }
+
+    // Use both input and change so updates are immediate on mobile
+    contentInput.addEventListener('input', () => { applyToActive(o => { o.set('text', contentInput.value); }); schedulePushHistory(); });
+    fontSelect.addEventListener('change', () => { applyToActive(o => { o.set('fontFamily', fontSelect.value); }); updateFontPreview(); schedulePushHistory(); });
+    colorInput.addEventListener('input', () => { applyToActive(o => { o.set('fill', colorInput.value); }); });
+    colorInput.addEventListener('change', () => { applyToActive(o => { o.set('fill', colorInput.value); }); schedulePushHistory(); });
+    boldBtn.addEventListener('click', () => { applyToActive(o => {
+        const current = (o.fontWeight === 'bold' || (o.fontWeight && parseInt(o.fontWeight,10) >= 700));
+        o.set('fontWeight', current ? 'normal' : 'bold');
+        updateBoldToggle();
+    }); schedulePushHistory(); });
+    italicBtn.addEventListener('click', () => { applyToActive(o => {
+        const current = (o.fontStyle === 'italic');
+        o.set('fontStyle', current ? 'normal' : 'italic');
+        updateItalicToggle();
+    }); schedulePushHistory(); });
+    alignSelect.addEventListener('change', () => applyToActive(o => { o.set('textAlign', alignSelect.value); }));
+    closeBtn.addEventListener('click', hideTextToolbar);
+
+    // helpers
+    function updateBoldToggle() {
+        const obj = canvas.getActiveObject();
+        if (!obj) return;
+        const isBold = (obj.fontWeight === 'bold' || (obj.fontWeight && parseInt(obj.fontWeight, 10) >= 700));
+        boldBtn.setAttribute('aria-pressed', isBold);
+    }
+    function updateItalicToggle() {
+        const obj = canvas.getActiveObject();
+        if (!obj) return; italicBtn.setAttribute('aria-pressed', obj.fontStyle === 'italic');
+    }
+
+    // when object enters editing state (double-click), keep toolbar in sync
+    canvas.on('mouse:dblclick', (ev) => {
+        const obj = canvas.findTarget(ev.e);
+        if (obj && (obj instanceof fabric.IText || obj.type === 'i-text')) {
+            obj.enterEditing();
+            showTextToolbarFor(obj);
+        }
+    });
+
+    // (size controls and toolbar-local undo/redo removed)
+
+    // font preview update
+    function updateFontPreview() {
+        fontPreview.style.fontFamily = fontSelect.value;
+        fontSelect.style.fontFamily = fontSelect.value;
+    }
+    updateFontPreview();
+
+    function handleSelection(e) {
+        const obj = e.selected && e.selected[0] ? e.selected[0] : e.target;
+        if (!obj) return hideTextToolbar();
+        // Show toolbar for any object that exposes `text`
+        if (typeof obj.text !== 'undefined') {
+            showTextToolbarFor(obj);
+        } else {
+            hideTextToolbar();
+        }
+    }
+
+    function showTextToolbarFor(obj) {
+        const toolbar = document.getElementById('text-toolbar');
+        toolbar.classList.remove('hidden');
+        toolbar.setAttribute('aria-hidden', 'false');
+        toolbar.classList.add('active');
+        toolbar.classList.remove('inactive');
+        // populate
+        contentInput.value = obj.text || '';
+        fontSelect.value = obj.fontFamily || 'Arial';
+        updateFontPreview();
+        colorInput.value = obj.fill || '#000000';
+        updateBoldToggle(); updateItalicToggle();
+        alignSelect.value = obj.textAlign || 'left';
+        updateToolbarPosition(obj);
+    }
+
+    function updateToolbarPosition(obj) {
+        const toolbar = document.getElementById('text-toolbar');
+        if (!toolbar || !obj) return;
+        // Keep toolbar fixed in the top-right (outside canvas); no dynamic follow
+        toolbar.style.right = '12px';
+        toolbar.style.top = '72px';
+    }
+
+    function hideTextToolbar() {
+        const toolbar = document.getElementById('text-toolbar');
+        if (!toolbar) return; toolbar.classList.add('hidden'); toolbar.setAttribute('aria-hidden', 'true');
+        if (toolbar) { toolbar.classList.remove('active'); toolbar.classList.add('inactive'); }
+    }
+}
+
+// --- CORE FUNCTIONS ---
+
+function addText() {
+    const text = new fabric.IText('Merry Xmas', {
+        left: 50, top: 50,
+        fontFamily: 'Arial', fill: '#d60000'
+    });
+    canvas.add(text);
+}
+
+function addSticker(url) {
+    fabric.loadSVGFromURL(url, function(objects, options) {
+        const obj = fabric.util.groupSVGElements(objects, options);
+        obj.scaleToWidth(100);
+        canvas.add(obj).renderAll();
+    });
+}
+
+// Static sticker helper
+function addStaticSticker(url) {
+    fabric.loadSVGFromURL(url, function(objects, options) {
+        const obj = fabric.util.groupSVGElements(objects, options);
+        obj.scaleToWidth(120);
+        obj.left = 60; obj.top = 60;
+        canvas.add(obj).setActiveObject(obj);
+        canvas.requestRenderAll();
+    });
+}
+
+// Animated sticker (from SVG) - simple property animation applied on the object.
+function addAnimatedStickerFromSVG(url, animType) {
+    fabric.loadSVGFromURL(url, function(objects, options) {
+        const obj = fabric.util.groupSVGElements(objects, options);
+        obj.scaleToWidth(120);
+        obj.left = 80; obj.top = 120;
+        obj.animateType = animType || 'rotate';
+        obj._anim = { t: 0 };
+        canvas.add(obj).setActiveObject(obj);
+        canvas.requestRenderAll();
+    });
+}
+
+function populateDrawer() {
+    const grid = document.getElementById('sticker-grid');
+    // clear any existing
+    grid.innerHTML = '';
+    stickers.forEach(item => {
+        const img = document.createElement('img');
+        img.src = item.url;
+        img.className = 'sticker-thumb';
+        img.onclick = () => {
+            if (item.type === 'static') addStaticSticker(item.url);
+            else if (item.type === 'animated') addAnimatedStickerFromSVG(item.url, item.anim);
+            toggleDrawer();
+        };
+        grid.appendChild(img);
+    });
+}
+
+function toggleDrawer() {
+    document.getElementById('sticker-drawer').classList.toggle('hidden');
+}
+
+// Delete selected object(s) from the canvas
+function deleteSelected() {
+    const active = canvas.getActiveObjects ? canvas.getActiveObjects() : (canvas.getActiveObject() ? [canvas.getActiveObject()] : []);
+    if (!active || active.length === 0) return;
+    active.forEach(o => { canvas.remove(o); });
+    canvas.discardActiveObject();
+    canvas.requestRenderAll();
+    schedulePushHistory();
+}
+
+// --- THE NEW SAVE LOGIC (No Database) ---
+
+document.getElementById('save-btn').onclick = function() {
+    // 1. Convert canvas to JSON
+    const json = JSON.stringify(canvas.toJSON());
+    
+    // 2. Compress the string to keep the URL "shorter"
+    const compressed = LZString.compressToEncodedURIComponent(json);
+    
+    // 3. Generate the Link
+    const shareLink = window.location.origin + window.location.pathname + '?card=' + compressed;
+    
+    // 4. Show the Link
+    document.getElementById('share-link').value = shareLink;
+    document.getElementById('modal-overlay').classList.remove('hidden');
+};
+
+// Export canvas as a JSON file for other viewers to load.
+function exportJSONFile() {
+    // Include custom properties like 'animateType' so viewers can reconstruct animations
+    const json = canvas.toJSON(['animateType']);
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(json));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = 'card.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+}
+
+// Wire export button if present
+const exportBtn = document.getElementById('export-btn');
+if (exportBtn) exportBtn.onclick = exportJSONFile;
+
+// Animation loop: simple property-based animations for objects that declare `animateType`.
+setInterval(() => {
+    const now = Date.now();
+    let need = false;
+    canvas.getObjects().forEach(o => {
+        if (!o.animateType) return;
+        need = true;
+        if (o.animateType === 'rotate') {
+            o.angle = (o.angle || 0) + 3;
+        } else if (o.animateType === 'pulse') {
+            const s = 1 + 0.06 * Math.sin(now / 150);
+            o.scaleX = o.scaleY = s;
+        }
+    });
+    if (need) canvas.requestRenderAll();
+}, 1000 / 30);
+
+function copyLink() {
+    const copyText = document.getElementById("share-link");
+    copyText.select();
+    document.execCommand("copy");
+    alert("Link copied to clipboard!");
+}
+
+function closeModal() {
+    document.getElementById('modal-overlay').classList.add('hidden');
+}
