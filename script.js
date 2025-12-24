@@ -486,31 +486,16 @@ async function openTemplateModal() {
 async function loadTemplateJSON(templateName) {
     try {
         const response = await fetch(`template/${templateName}.json`);
-        if (!response.ok) throw new Error("Template file not found");
-        
         const jsonData = await response.json();
         
-        // 1. Clear current canvas
+        // Clear and load new data
         canvas.clear();
-
-        // 2. Use loadFromJSON with a callback
-        // The second argument is a callback that runs once the structure is loaded
-        canvas.loadFromJSON(jsonData, function() {
-            // This runs AFTER the canvas has tried to load everything
+        canvas.loadFromJSON(jsonData, () => {
             canvas.renderAll();
             document.getElementById("templateModal").style.display = "none";
-            console.log("Template structure loaded!");
-        }, function(o, object) {
-            // This is the 'reviver' - it runs for EVERY object being loaded
-            // If it's an image, we make sure it knows it's cross-origin
-            if (object.type === 'image') {
-                object.set({ crossOrigin: 'anonymous' });
-            }
         });
-
     } catch (e) {
-        console.error(e);
-        alert("Could not load template data. Check if the JSON file exists in /template.");
+        alert("Could not load template data.");
     }
 }
 
