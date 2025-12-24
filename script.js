@@ -71,9 +71,26 @@ function addText() {
 // 1. Change Font Family
 function changeFont(fontName) {
     const activeObj = canvas.getActiveObject();
-    if (activeObj && activeObj.type === 'i-text') {
-        activeObj.set("fontFamily", fontName);
-        canvas.requestRenderAll(); // Refresh canvas
+    
+    if (activeObj && (activeObj.type === 'i-text' || activeObj.type === 'text')) {
+        
+        // Use WebFont to load the font before applying it to the canvas
+        WebFont.load({
+            google: {
+                families: [fontName]
+            },
+            fontactive: function() {
+                // This runs once the font is actually downloaded and ready
+                activeObj.set("fontFamily", fontName);
+                canvas.requestRenderAll();
+            },
+            fontinactive: function() {
+                // Fallback if the font fails to load
+                console.warn("Font " + fontName + " could not be loaded.");
+                activeObj.set("fontFamily", fontName);
+                canvas.requestRenderAll();
+            }
+        });
     }
 }
 
