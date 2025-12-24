@@ -366,8 +366,9 @@ async function shareDesign() {
             createdAt: new Date()
         });
 
-        // 2. Generate the URL
-        const shareURL = window.location.origin + window.location.pathname + "?id=" + docRef.id;
+    
+        // Share URL
+        const shareURL = window.location.origin + window.location.pathname.replace('index.html', '') + "view/view.html?id=" + docRef.id;
 
         // 3. Show the Popup
         shareInput.value = shareURL;

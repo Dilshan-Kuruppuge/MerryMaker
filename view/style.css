@@ -1,0 +1,51 @@
+body {
+    padding: 0; margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: rgb(37, 37, 37);
+    font-family: sans-serif;
+}
+
+.header {
+    height: 5vh;
+    width: 100%;
+    background-color: rgb(32, 28, 28);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.MerryMaker {
+    color: #ff3b30;
+    font-family: 'Mountains of Christmas', cursive;
+    font-size: 2.5vh;
+}
+
+.canvas-container {
+    height: 70vh;
+    width: 55vh;
+    background-color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    margin-top: 30px;
+}
+
+.viewer-footer {
+    margin-top: 30px;
+}
+
+.create-btn {
+    background-color: #ff3b30;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 50px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 1.8vh;
+    transition: transform 0.2s;
+}
+
+.create-btn:hover {
+    transform: scale(1.05);
+}
