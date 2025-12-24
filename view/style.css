@@ -45,6 +45,8 @@ body {
     perspective: 1000px;
     width: 100%;
     position: relative;
+    /* Reduced bottom padding to bring footer closer */
+    padding-bottom: 2vh; 
 }
 
 /* Envelope UI */
@@ -91,13 +93,14 @@ body {
     width: 50vh;
     height: 70vh;
     background: white;
-    box-shadow: 0 0 50px rgba(255,255,255,0.2);
+    /* Enhanced glow for better contrast */
+    box-shadow: 0 0 40px rgba(255,255,255,0.15), 0 20px 50px rgba(0,0,0,0.5);
     z-index: 2;
     opacity: 0;
-    transform: scale(0.5) translateY(20vh);
-    transition: opacity 1s 0.8s, transform 1.2s 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform: scale(0.5) translateY(10vh);
+    /* Faster scaling transition for a "pop" feel */
+    transition: opacity 0.8s 0.6s, transform 1s 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 /* Interaction Classes */
 .is-open .flap {
     transform: rotateX(160deg);
@@ -123,6 +126,8 @@ body {
 }
 
 .footer-area {
+    /* Reduced margin to tighten the layout */
+    margin-top: -2vh; 
     padding-bottom: 4vh;
     z-index: 10;
 }
@@ -137,4 +142,4 @@ body {
     font-size: 2vh;
     cursor: pointer;
     box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-}
+}   
