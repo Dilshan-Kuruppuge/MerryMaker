@@ -246,3 +246,89 @@ function renderIcon(ctx, left, top, styleOverride, fabricObject) {
     ctx.drawImage(img, -size / 2, -size / 2, size, size);
     ctx.restore();
 }
+
+
+
+
+// This will hold the filenames once we get them from GitHub
+let STICKER_FILES = [];
+
+async function openStickerModal() {
+    const modal = document.getElementById("stickerModal");
+    const stickerGrid = document.getElementById("stickerGrid");
+    
+    modal.style.display = "block";
+    stickerGrid.innerHTML = '<p style="color:white; text-align:center;">Scanning assets folder...</p>';
+
+    try {
+        // We fetch the list of files directly from your GitHub repository
+        const response = await fetch('https://api.github.com/repos/Dilshan-Kuruppuge/MerryMaker/contents/assets');
+        const files = await response.json();
+
+        // We only want images (png, jpg, svg) and we ignore everything else
+        STICKER_FILES = files
+            .filter(file => file.name.match(/\.(png|jpg|jpeg|svg|webp)$/i))
+            .map(file => file.name);
+
+        renderStickers(STICKER_FILES);
+    } catch (error) {
+        console.error("GitHub API Error:", error);
+        stickerGrid.innerHTML = '<p style="color:red;">Error: Could not list files from GitHub assets folder.</p>';
+    }
+}
+
+function renderStickers(list) {
+    const stickerGrid = document.getElementById("stickerGrid");
+    stickerGrid.innerHTML = ''; 
+
+    if (list.length === 0) {
+        stickerGrid.innerHTML = '<p style="color:white;">No images found in /assets</p>';
+        return;
+    }
+
+    list.forEach(fileName => {
+        const img = document.createElement('img');
+        // Point to the relative path in your repo
+        img.src = `assets/${fileName}`; 
+        img.className = 'sticker-item';
+        img.title = fileName; // Shows name on hover
+        
+        img.onclick = () => {
+            addImgObject(`assets/${fileName}`);
+            document.getElementById("stickerModal").style.display = "none";
+        };
+        stickerGrid.appendChild(img);
+    });
+}
+
+
+document.getElementById('stickerSearch').oninput = function() {
+    const query = this.value.toLowerCase();
+    const filtered = STICKER_FILES.filter(name => name.toLowerCase().includes(query));
+    renderStickers(filtered);
+};
+
+
+// Function to close the modal
+function closeStickerModal() {
+    const modal = document.getElementById("stickerModal");
+    modal.style.display = "none";
+}
+
+// Attach listeners once the DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById("stickerModal");
+    const closeBtn = document.querySelector(".close-modal");
+
+    // 1. Click the X button
+    if (closeBtn) {
+        closeBtn.onclick = closeStickerModal;
+    }
+
+    // 2. Click outside the modal content
+    window.onclick = (event) => {
+        if (event.target == modal) {
+            closeStickerModal();
+        }
+    };
+});

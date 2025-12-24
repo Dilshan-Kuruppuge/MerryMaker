@@ -41,8 +41,8 @@
             <p class="button_text">Text</p>
         </button>
 
-        <button class="add_buttons" onclick="addImgObject('assets/santa.png')">
-            <span class="add_icon">🎅</span>
+        <button class="add_buttons" onclick="openStickerModal()">
+            <span class="add_icon">🎁</span>
             <p class="button_text">Stickers</p>
         </button>
 
@@ -92,6 +92,18 @@
         <button style="text-decoration: underline;" class="u toggle" onclick="toggleUnderline()">U</button>
 
      </div>
+
+     <div id="stickerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Select a Sticker</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <input type="text" id="stickerSearch" placeholder="Search stickers (e.g., santa, tree)...">
+            <div id="stickerGrid" class="sticker-grid">
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>
