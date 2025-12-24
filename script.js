@@ -448,3 +448,107 @@ async function loadSharedDesign() {
 
 // Call this at the very bottom of your script.js
 loadSharedDesign();
+
+
+
+
+// ============================================
+// 1. TEMPLATE LOGIC
+// ============================================
+
+async function openTemplateModal() {
+    const modal = document.getElementById("templateModal");
+    const grid = document.getElementById("templateGrid");
+    modal.style.display = "block";
+    grid.innerHTML = '<p style="text-align:center;">Loading templates...</p>';
+
+    try {
+        const response = await fetch('https://api.github.com/repos/Dilshan-Kuruppuge/MerryMaker/contents/template');
+        const files = await response.json();
+
+        // Only show PNGs
+        const pngFiles = files.filter(file => file.name.endsWith('.png'));
+        
+        grid.innerHTML = ''; 
+        pngFiles.forEach(file => {
+            const nameOnly = file.name.replace('.png', '');
+            const img = document.createElement('img');
+            img.src = `template/${file.name}`;
+            img.className = 'sticker-item';
+            img.onclick = () => loadTemplateJSON(nameOnly);
+            grid.appendChild(img);
+        });
+    } catch (e) {
+        grid.innerHTML = '<p style="color:red;">Error loading templates.</p>';
+    }
+}
+
+async function loadTemplateJSON(templateName) {
+    try {
+        const response = await fetch(`template/${templateName}.json`);
+        const jsonData = await response.json();
+        
+        // Clear and load new data
+        canvas.clear();
+        canvas.loadFromJSON(jsonData, () => {
+            canvas.renderAll();
+            document.getElementById("templateModal").style.display = "none";
+        });
+    } catch (e) {
+        alert("Could not load template data.");
+    }
+}
+
+function closeTemplateModal() {
+    document.getElementById("templateModal").style.display = "none";
+}
+
+// ============================================
+// 2. EXPORT TO JSON (Local Download)
+// ============================================
+
+function exportJSON() {
+    const jsonData = JSON.stringify(canvas.toJSON());
+    const blob = new Blob([jsonData], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "my_design.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// ============================================
+// 3. IMPROVED SHARING (Native + Name)
+// ============================================
+
+// Check if Web Share API is supported (mostly mobile)
+document.addEventListener('DOMContentLoaded', () => {
+    if (navigator.share) {
+        document.getElementById('nativeShareBtn').style.display = 'block';
+    }
+});
+
+// Update the shareDesign function to handle the native share logic
+const nativeBtn = document.getElementById('nativeShareBtn');
+nativeBtn.onclick = async () => {
+    const name = document.getElementById('senderName').value;
+    const shareURL = document.getElementById('shareURLInput').value;
+
+    if (!name) {
+        alert("Please enter your name first!");
+        return;
+    }
+
+    try {
+        await navigator.share({
+            title: 'Merry Maker Card',
+            text: `${name} has shared a Christmas Card with you! 🎄`,
+            url: shareURL
+        });
+    } catch (err) {
+        console.log("Sharing failed", err);
+    }
+};

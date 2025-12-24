@@ -19,9 +19,8 @@
     <!-- Header -->
 
     <div class="header">
-
-        <p class="MerryMaker"">🎄 MerryMaker</p>
- 
+        <p class="MerryMaker">🎄 MerryMaker</p>
+        <a href="#" onclick="exportJSON()" style="color: white; margin-right: 2vh; font-size: 1.8vh; text-decoration: none;">📥 Export</a>
     </div>
 
 
@@ -47,11 +46,18 @@
             <span class="add_icon">🎁</span>
             <p class="button_text">Stickers</p>
         </button>
+
+        <button class="add_buttons" onclick="openTemplateModal()">
+            <span class="add_icon">🖼️</span>
+            <p class="button_text">Templates</p>
+        </button>
         
         <button class="add_buttons" onclick="shareDesign()">
             <span class="add_icon">🔗</span>
             <p class="button_text">Share Link</p>
         </button>
+
+
 
     </div>
 
@@ -108,23 +114,45 @@
     </div>
 
 
+   
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Choose Template</h3>
+                <span class="close-modal" onclick="closeTemplateModal()">&times;</span>
+            </div>
+            <div id="templateGrid" class="sticker-grid"></div>
+        </div>
+    </div>
+
+
     <div id="shareModal" class="modal">
         <div class="modal-content share-modal-content">
             <div class="modal-header">
                 <h3>Share Your Design</h3>
                 <span class="close-share-modal" style="cursor:pointer; font-size:28px;">&times;</span>
             </div>
-            <p style="color: #ccc; font-size: 14px;">Anyone with this link can view your creation:</p>
+        
+            <input type="text" id="senderName" placeholder="Your Name (Required)" style="width:100%; padding:1vh; margin-bottom:2vh; border-radius:5px; border:none;">
+            <p style="color: #ccc; font-size: 1.5vh;">Anyone with this link can view your creation:</p>
         
             <div class="link-container">
                 <input type="text" id="shareURLInput" readonly>
                 <button id="copyLinkBtn">Copy</button>
             </div>
         
+            <button id="nativeShareBtn" style="width:100%; margin-top:2vh; padding:1.5vh; background:#25D366; color:white; border:none; border-radius:8px; font-weight:bold; display:none;">
+            📱 Share with Friends
+            </button>
+    
+        
             <div id="copySuccessMsg" style="display:none; color: #00ccff; margin-top: 10px; font-size: 14px; text-align: center;">
-                ✓ Link copied to clipboard!
+            ✅ Link copied to clipboard!
+        
             </div>
+    
         </div>
+
     </div>
     
 
