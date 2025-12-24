@@ -29,22 +29,18 @@ textBtn.addEventListener('click', addText);
 // A. Function to add ANY Image by file path
 function addImgObject(filePath) {
     fabric.Image.fromURL(filePath, function(img) {
-        // Set defaults (Canva style)
-        img.scaleToWidth(100); // Resize to reasonable start size
+        img.scaleToWidth(100);
         img.set({
             left: canvas.width / 2 - 50,
             top: canvas.height / 2 - 50,
-            cornerColor: 'white',
-            cornerStrokeColor: 'gray',
-            borderColor: 'gray',
-            transparentCorners: false,
-            padding: 10,
-            cornerSize: 10
+            // Add these to help with hosting/CORS
+            crossOrigin: 'anonymous' 
         });
         canvas.add(img);
-        canvas.setActiveObject(img); // Auto-select it
-    });
+        canvas.setActiveObject(img);
+    }, { crossOrigin: 'anonymous' }); // Critical for hosted environments
 }
+
 
 // B. Function to add Text
 function addText() {
