@@ -336,24 +336,101 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-// Function to export canvas to JSON
-function exportCanvasJSON() {
-    const canvasJSON = JSON.stringify(canvas.toJSON());
-    console.log("Exported JSON:", canvasJSON);
+// --- Firebase Configuration ---
+const firebaseConfig = {
+
+
+  apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
+  authDomain: "ymerrymaker-d166c.firebaseapp.com",
+  projectId: "merrymaker-d166c",
+  storageBucket: "merrymaker-d166c.firebasestorage.app",
+  messagingSenderId: "248467205664",
+  appId: "1:248467205664:web:5976ce50704ed93dd09645"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// --- Share / Upload Logic ---
+
+async function shareDesign() {
+    const canvasJSON = canvas.toJSON();
+    const shareModal = document.getElementById("shareModal");
+    const shareInput = document.getElementById("shareURLInput");
     
-    // You can also trigger a download of a .json file
-    const blob = new Blob([canvasJSON], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "merry-maker-design.json";
-    link.click();
+    try {
+        // 1. Save to Firebase
+        const docRef = await db.collection("designs").add({
+            data: canvasJSON,
+            createdAt: new Date()
+        });
+
+        // 2. Generate the URL
+        const shareURL = window.location.origin + window.location.pathname + "?id=" + docRef.id;
+
+        // 3. Show the Popup
+        shareInput.value = shareURL;
+        shareModal.style.display = "block";
+        
+    } catch (error) {
+        console.error("Error saving design: ", error);
+        alert("Failed to save design.");
+    }
 }
 
+// Logic for the Copy Button and closing the modal
+document.addEventListener('DOMContentLoaded', () => {
+    const copyBtn = document.getElementById("copyLinkBtn");
+    const shareInput = document.getElementById("shareURLInput");
+    const successMsg = document.getElementById("copySuccessMsg");
+    const shareModal = document.getElementById("shareModal");
+    const closeBtn = document.querySelector(".close-share-modal");
 
-function importCanvasJSON(jsonInput) {
-    canvas.loadFromJSON(jsonInput, function() {
-        canvas.renderAll();
-        console.log("Canvas restored!");
+    copyBtn.onclick = async () => {
+        await navigator.clipboard.writeText(shareInput.value);
+        
+        // Show success feedback
+        copyBtn.innerText = "Copied!";
+        successMsg.style.display = "block";
+        
+        setTimeout(() => {
+            copyBtn.innerText = "Copy";
+            successMsg.style.display = "none";
+        }, 2000);
+    };
+
+    closeBtn.onclick = () => shareModal.style.display = "none";
+    
+    // Close if clicking outside
+    window.addEventListener('click', (e) => {
+        if (e.target == shareModal) shareModal.style.display = "none";
     });
+});
+
+// --- Loading Logic (Run on Page Load) ---
+
+async function loadSharedDesign() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const designId = urlParams.get('id');
+
+    if (designId) {
+        try {
+            const doc = await db.collection("designs").doc(designId).get();
+            if (doc.exists) {
+                const designData = doc.data().data;
+                canvas.loadFromJSON(designData, function() {
+                    canvas.renderAll();
+                    console.log("Shared design loaded!");
+                });
+            } else {
+                console.log("No such design found.");
+            }
+        } catch (error) {
+            console.error("Error loading shared design:", error);
+        }
+    }
 }
+
+// Call this at the very bottom of your script.js
+loadSharedDesign();

@@ -7,6 +7,8 @@
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js"></script>
     <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat&family=Pacifico&family=Poppins&family=Dancing+Script&family=Bebas+Neue&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 
@@ -45,10 +47,10 @@
             <span class="add_icon">🎁</span>
             <p class="button_text">Stickers</p>
         </button>
-
-        <button class="add_buttons" onclick="exportCanvasJSON()">
-            <span class="add_icon">📤</span>
-            <p class="button_text">Export JSON</p>
+        
+        <button class="add_buttons" onclick="shareDesign()">
+            <span class="add_icon">🔗</span>
+            <p class="button_text">Share Link</p>
         </button>
 
     </div>
@@ -104,6 +106,27 @@
             </div>
         </div>
     </div>
+
+
+    <div id="shareModal" class="modal">
+        <div class="modal-content share-modal-content">
+            <div class="modal-header">
+                <h3>Share Your Design</h3>
+                <span class="close-share-modal" style="cursor:pointer; font-size:28px;">&times;</span>
+            </div>
+            <p style="color: #ccc; font-size: 14px;">Anyone with this link can view your creation:</p>
+        
+            <div class="link-container">
+                <input type="text" id="shareURLInput" readonly>
+                <button id="copyLinkBtn">Copy</button>
+            </div>
+        
+            <div id="copySuccessMsg" style="display:none; color: #00ccff; margin-top: 10px; font-size: 14px; text-align: center;">
+                ✓ Link copied to clipboard!
+            </div>
+        </div>
+    </div>
+    
 
     <script src="script.js"></script>
 </body>

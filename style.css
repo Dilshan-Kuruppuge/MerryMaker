@@ -237,3 +237,47 @@ body{
     transform: scale(1.1);
     background: #444;
 }
+
+
+
+/* Specific styling for the Share Modal */
+.share-modal-content {
+    max-width: 400px;
+    text-align: left;
+}
+
+.link-container {
+    display: flex;
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 5px;
+    margin-top: 15px;
+}
+
+#shareURLInput {
+    flex-grow: 1;
+    background: transparent;
+    border: none;
+    color: #00ccff;
+    padding: 10px;
+    font-size: 13px;
+    outline: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#copyLinkBtn {
+    background: #00ccff;
+    color: #000;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+#copyLinkBtn:hover {
+    background: #0099cc;
+}
