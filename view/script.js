@@ -1,4 +1,4 @@
-// --- 1. FIREBASE CONFIG (Kept from original) ---
+// --- 1. FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
     authDomain: "merrymaker-d166c.firebaseapp.com",
@@ -7,11 +7,10 @@ const firebaseConfig = {
     messagingSenderId: "Y248467205664",
     appId: "Y1:248467205664:web:5976ce50704ed93dd09645"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// --- 2. CANVAS SETUP ---
+// --- 2. CANVAS INIT ---
 const wrapper = document.getElementById('wrapper');
 const canvas = new fabric.StaticCanvas('viewCanvas', {
     width: wrapper.clientWidth,
@@ -19,50 +18,82 @@ const canvas = new fabric.StaticCanvas('viewCanvas', {
     backgroundColor: 'white'
 });
 
-// --- 3. CINEMATIC LOGIC ---
-async function preFetchDesign() {
-    const designId = new URLSearchParams(window.location.search).get('id');
+// --- 3. UI INTERACTION ---
+function openEnvelope() {
+    const env = document.getElementById('envelope');
+    const envContainer = document.getElementById('envelopeContainer');
+    const designWrapper = document.getElementById('wrapper');
+
+    // Start Animation Sequence
+    env.classList.add('is-open');
+    
+    setTimeout(() => {
+        envContainer.classList.add('is-faded');
+        designWrapper.classList.add('canvas-visible');
+    }, 800);
+}
+
+// --- 4. SNOW ENGINE ---
+const snowCanvas = document.getElementById('snowCanvas');
+const ctx = snowCanvas.getContext('2d');
+let particles = [];
+
+function resizeSnow() {
+    snowCanvas.width = window.innerWidth;
+    snowCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeSnow);
+resizeSnow();
+
+class Snowflake {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.x = Math.random() * snowCanvas.width;
+        this.y = Math.random() * snowCanvas.height;
+        this.size = Math.random() * 3 + 1;
+        this.speed = Math.random() * 1 + 0.5;
+        this.velX = Math.random() * 0.5 - 0.25;
+    }
+    update() {
+        this.y += this.speed;
+        this.x += this.velX;
+        if (this.y > snowCanvas.height) this.y = -10;
+    }
+    draw() {
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+for(let i = 0; i < 100; i++) particles.push(new Snowflake());
+
+function animateSnow() {
+    ctx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    requestAnimationFrame(animateSnow);
+}
+animateSnow();
+
+// --- 5. LOADING LOGIC ---
+async function loadDesign() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const designId = urlParams.get('id');
     if (!designId) return;
 
     try {
         const doc = await db.collection("designs").doc(designId).get();
         if (doc.exists) {
-            canvas.loadFromJSON(doc.data().data, function() {
+            canvas.loadFromJSON(doc.data().data, () => {
                 canvas.renderAll();
-                console.log("Card ready in background..."); // Clever Trick: Pre-renders here
             });
         }
-    } catch (e) { console.error("Load failed", e); }
+    } catch (e) { console.error(e); }
 }
-
-function animateOpen() {
-    const overlay = document.getElementById('openingOverlay');
-    const envelope = document.getElementById('envelopeWrapper');
-    const stage = document.getElementById('cardStage');
-
-    // Step 1: Open the flap and slide letter
-    envelope.classList.add('env-open');
-
-    // Step 2: Fade the entire overlay and reveal the card
-    setTimeout(() => {
-        overlay.style.opacity = '0';
-        overlay.style.transform = 'scale(1.2)';
-
-        setTimeout(() => {
-            overlay.style.display = 'none';
-            stage.classList.remove('hidden');
-            
-            // Re-sync canvas dimensions for mobile
-            canvas.setDimensions({
-                width: wrapper.clientWidth,
-                height: wrapper.clientHeight
-            });
-            canvas.renderAll();
-            
-            // Final fade in
-            setTimeout(() => { stage.style.opacity = '1'; }, 50);
-        }, 800);
-    }, 1600); // Wait for flap/slide animation to finish
-}
-
-window.addEventListener('load', preFetchDesign);
+window.addEventListener('load', loadDesign);

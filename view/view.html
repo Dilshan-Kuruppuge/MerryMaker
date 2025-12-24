@@ -2,47 +2,39 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>You have a gift! - MerryMaker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <title>Merry Maker - Viewer</title>
 </head>
 <body>
+    <canvas id="snowCanvas"></canvas>
 
-    <div class="night-sky">
-        <div class="snow-layer layer1"></div>
-        <div class="snow-layer layer2"></div>
-        <div class="snow-layer layer3"></div>
+    <div class="header">
+        <p class="MerryMaker">🎁 MerryMaker Viewer</p>
     </div>
 
-    <div id="openingOverlay" class="overlay">
-        <div class="envelope-wrapper" id="envelopeWrapper" onclick="animateOpen()">
-            <div class="envelope">
-                <div class="flap"></div>
-                <div class="pocket"></div>
-                <div class="letter" id="letter">
-                    <div class="mini-card">❄️</div>
+    <div class="scene">
+        <div id="envelopeContainer" class="envelope-container">
+            <div class="envelope-wrapper" id="envelope" onclick="openEnvelope()">
+                <div class="envelope">
+                    <div class="flap"></div>
+                    <div class="pocket"></div>
                 </div>
+                <div class="instruction">Tap to Open your Gift</div>
             </div>
-            <h1 class="tap-hint">Tap to Open Your Gift</h1>
+        </div>
+
+        <div id="wrapper" class="canvas-wrapper">
+            <canvas id="viewCanvas"></canvas>
         </div>
     </div>
 
-    <div id="cardStage" class="stage hidden">
-        <div class="header" style="background-color: rgb(39, 39, 39);">
-            <p class="MerryMaker">🎄 MerryMaker</p>
-        </div>
-        <div class="canvas-container">
-            <div id="wrapper" class="canvas-wrapper">
-                <canvas id="viewCanvas"></canvas>
-            </div>
-        </div>
-        <div class="footer-area">
-            <button class="create-btn" style="width: 30vh; height: 4vh; color: rgb(179, 179, 179); background-color: rgb(0, 132, 255); border: none; border-radius: 25%; font-size: 2vh; padding: 1vh;" onclick="window.location.href='../index.html'">Create Your Own</button>
-        </div>
+    <div class="footer-area">
+        <button class="create-btn" onclick="window.location.href='../index.html'">Create Your Own</button>
     </div>
 
     <script src="script.js"></script>
