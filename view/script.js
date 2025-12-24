@@ -25,34 +25,21 @@ async function loadDesign() {
     const urlParams = new URLSearchParams(window.location.search);
     const designId = urlParams.get('id');
 
-    if (!designId) {
-        console.error("Design ID not found in URL.");
-        return;
-    }
+    if (!designId) return;
 
     try {
         const doc = await db.collection("designs").doc(designId).get();
-        
         if (doc.exists) {
-            const rawData = doc.data().data;
+            const finalData = doc.data().data; // Data now contains absolute paths
 
-            // Correct asset paths from 'assets/' to '../assets/' for subfolder viewing
-            let jsonString = JSON.stringify(rawData);
-            jsonString = jsonString.split('assets/').join('../assets/');
-            const finalData = JSON.parse(jsonString);
-
-            // Load and render
             canvas.loadFromJSON(finalData, function() {
                 canvas.renderAll();
-                console.log("Design rendered successfully.");
+                console.log("Design rendered with absolute paths!");
             });
-        } else {
-            console.error("No design found with ID:", designId);
         }
     } catch (error) {
-        console.error("Error fetching from Firebase:", error);
+        console.error("Error loading design:", error);
     }
 }
-
 // Trigger load when the window is fully ready
 window.addEventListener('load', loadDesign);

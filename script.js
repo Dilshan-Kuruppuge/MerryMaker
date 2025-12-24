@@ -355,22 +355,35 @@ const db = firebase.firestore();
 // --- Share / Upload Logic ---
 
 async function shareDesign() {
+    // 1. Get the current canvas data as a JSON object
     const canvasJSON = canvas.toJSON();
     const shareModal = document.getElementById("shareModal");
     const shareInput = document.getElementById("shareURLInput");
     
+    // 2. Convert relative sticker paths to absolute URLs
+    // Base URL of your hosted site
+    const baseURL = "https://dilshan-kuruppuge.github.io/MerryMaker/";
+
+    if (canvasJSON.objects) {
+        canvasJSON.objects.forEach(obj => {
+            // Check if it's an image and has a relative 'src' starting with 'assets/'
+            if (obj.type === 'image' && obj.src && obj.src.startsWith('assets/')) {
+                obj.src = baseURL + obj.src;
+            }
+        });
+    }
+    
     try {
-        // 1. Save to Firebase
+        // 3. Save the modified JSON to Firebase
         const docRef = await db.collection("designs").add({
             data: canvasJSON,
             createdAt: new Date()
         });
 
-    
-        // Share URL
+        // 4. Generate the Share URL pointing to the viewer
         const shareURL = window.location.origin + window.location.pathname.replace('index.html', '') + "view/view.html?id=" + docRef.id;
 
-        // 3. Show the Popup
+        // 5. Show the Popup
         shareInput.value = shareURL;
         shareModal.style.display = "block";
         
