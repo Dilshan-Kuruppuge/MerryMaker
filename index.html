@@ -2,117 +2,96 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Xmas Card Creator</title>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
-    <!-- Google Fonts: many families for the toolbar font picker -->
-    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Playfair+Display:wght@400;700&family=Pacifico&family=Poppins:wght@400;700&family=Merriweather:wght@400;700&family=Oswald:wght@400;700&family=Raleway:wght@400;700&family=Nunito:wght@400;700&family=Cinzel:wght@400;700&family=Dancing+Script&family=Anton&family=Bebas+Neue&family=Comfortaa:wght@300;400;700&family=Quicksand:wght@300;400;700&family=Satisfy&family=Indie+Flower&family=Caveat&family=Alegreya:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://unpkg.com/fabric@5.3.0/dist/fabric.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Montserrat&family=Pacifico&family=Poppins&family=Dancing+Script&family=Bebas+Neue&display=swap" rel="stylesheet">
+    <title>Merry Maker</title>
+
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="top-bar">
-        <span class="logo">🎄 MerryMaker</span>
-        <div class="top-actions">
-            <button id="global-undo" class="save-btn" title="Undo" aria-label="Undo">↶</button>
-            <button id="global-redo" class="save-btn" title="Redo" aria-label="Redo">↷</button>
-            <button id="export-btn" class="save-btn" title="Export" aria-label="Export">Export</button>
-        </div>
+    <!-- Header -->
+
+    <div class="header">
+
+        <p class="MerryMaker"">🎄 MerryMaker</p>
+ 
     </div>
 
-    <div id="canvas-container">
+
+    <!-- Canvas -->
+
+    <div class="canvas-container">
         <canvas id="c"></canvas>
     </div>
 
-    <div id="bottom-toolbar" class="editor-ui">
-        <button onclick="addText()">
-            <span>📝</span>
-            <small>Text</small>
+
+
+
+    <!-- Toolbar -->
+
+    <div class="toolbar">
+
+        <button class="add_buttons">
+            <span class="add_icon">📝</span>
+            <p class="button_text">Text</p>
         </button>
-        <button onclick="toggleDrawer()">
-            <span>🎅</span>
-            <small>Stickers</small>
+
+        <button class="add_buttons" onclick="addImgObject('assets/santa.png')">
+            <span class="add_icon">🎅</span>
+            <p class="button_text">Stickers</p>
         </button>
-        <button id="save-btn" class="save-btn" title="Share" aria-label="Share" onclick="document.getElementById('save-btn') && document.getElementById('save-btn').click()">
-            <span>🔗</span>
-            <small>Share</small>
+
+        <button class="add_buttons">
+            <span class="add_icon">🔗</span>
+            <p class="button_text">Share</p>
         </button>
+
     </div>
 
-    <div id="sticker-drawer" class="drawer hidden">
-        <div class="drawer-header">
-            <h3>Pick a Sticker</h3>
-            <button onclick="toggleDrawer()">✕</button>
-        </div>
-        <div id="sticker-grid" class="sticker-grid">
-            </div>
-    </div>
 
-    <div id="modal-overlay" class="hidden">
-        <div class="modal">
-            <h2>Card Saved! 🎁</h2>
-            <p>Send this link to your loved ones:</p>
-            <input type="text" id="share-link" readonly>
-            <button class="copy-btn" onclick="copyLink()">Copy Link</button>
-            <button class="close-btn" onclick="closeModal()">Close</button>
-        </div>
-    </div>
+    <!-- TextEditor -->
+     <div class="text_editor">
+
+        <select name="Font Style" id="Font_Style" class="Font_Style" onchange="changeFont(this.value)">
+                <option value="Arial" style="font-family: Arial, Helvetica, sans-serif;">Arial</option>
+                <option value="Roboto" style="font-family: Roboto, sans-serif;">Roboto</option>
+                <option value="Open Sans" style="font-family: Open Sans, sans-serif;">Open Sans</option>
+                <option value="Lato" style="font-family: Lato, sans-serif;">Lato</option>
+                <option value="Montserrat" style="font-family: Montserrat, sans-serif;">Montserrat</option>
+                <option value="Playfair Display" style="font-family: Playfair Display, serif;">Playfair Display</option>
+                <option value="Pacifico" style="font-family: Pacifico, cursive;">Pacifico</option>
+                <option value="Poppins" style="font-family: Poppins, sans-serif;">Poppins</option>
+                <option value="Merriweather" style="font-family: Merriweather, serif;">Merriweather</option>
+                <option value="Cinzel" style="font-family: Cinzel, serif;">Cinzel</option>
+                <option value="Dancing Script" style="font-family: Dancing Script, cursive;">Dancing Script</option>
+                <option value="Anton" style="font-family: Anton, sans-serif;">Anton</option>
+                <option value="Bebas Neue" style="font-family: Bebas Neue, sans-serif;">Bebas Neue</option>
+                <option value="Comfortaa" style="font-family: Comfortaa, sans-serif;">Comfortaa</option>
+                <option value="Quicksand" style="font-family: Quicksand, sans-serif;">Quicksand</option>
+                <option value="Satisfy" style="font-family: Satisfy, cursive;">Satisfy</option>
+                <option value="Indie Flower" style="font-family: Indie Flower, cursive;">Indie Flower</option>
+                <option value="Caveat" style="font-family: Caveat, cursive;">Caveat</option>
+                <option value="Alegreya" style="font-family: Alegreya, serif;">Alegreya</option>
+                <option value="Oswald" style="font-family: Oswald, sans-serif;">Oswald</option>
+                <option value="Raleway" style="font-family: Raleway, sans-serif;">Raleway</option>
+                <option value="Nunito" style="font-family: Nunito, sans-serif;">Nunito</option>
+                <option value="Mountains of Christmas" style="font-family: Mountains of Christmas, cursive;">Mountains</option>
+                <option value="Georgia" style="font-family: Georgia, serif;">Georgia</option>
+                <option value="Helvetica" style="font-family: Helvetica, sans-serif;">Helvetica</option>
+        </select>
+
+        <input type="color" id="fontColorPicker" class="Color_Picker" value="#000000">
+
+        <button style="font-weight: bold;" class="b toggle" onclick="toggleBold()" id="toggle-b">B</button>
+        <button style="font-style: italic;" class="i toggle" onclick="toggleItalic()">I</button>
+        <button style="text-decoration: underline;" class="u toggle" onclick="toggleUnderline()">U</button>
+
+     </div>
 
     <script src="script.js"></script>
-    <!-- Floating text edit toolbar (mobile-friendly) -->
-    <div id="text-toolbar" class="text-toolbar hidden" role="dialog" aria-hidden="true">
-        <div class="toolbar-row">
-            <input id="text-content" type="text" placeholder="Edit text" />
-            <div class="toolbar-actions">
-                <button id="delete-btn" class="toolbar-btn" title="Delete">🗑</button>
-                <button id="toolbar-close" class="toolbar-btn">✕</button>
-            </div>
-        </div>
-        <div class="toolbar-row">
-            <select id="font-family" class="toolbar-select">
-                <option value="Arial">Arial</option>
-                <option value="Roboto">Roboto</option>
-                <option value="Open Sans">Open Sans</option>
-                <option value="Lato">Lato</option>
-                <option value="Montserrat">Montserrat</option>
-                <option value="Playfair Display">Playfair Display</option>
-                <option value="Pacifico">Pacifico</option>
-                <option value="Poppins">Poppins</option>
-                <option value="Merriweather">Merriweather</option>
-                <option value="Cinzel">Cinzel</option>
-                <option value="Dancing Script">Dancing Script</option>
-                <option value="Anton">Anton</option>
-                <option value="Bebas Neue">Bebas Neue</option>
-                <option value="Comfortaa">Comfortaa</option>
-                <option value="Quicksand">Quicksand</option>
-                <option value="Satisfy">Satisfy</option>
-                <option value="Indie Flower">Indie Flower</option>
-                <option value="Caveat">Caveat</option>
-                <option value="Alegreya">Alegreya</option>
-                <option value="Oswald">Oswald</option>
-                <option value="Raleway">Raleway</option>
-                <option value="Nunito">Nunito</option>
-                <option value="Mountains of Christmas">Mountains</option>
-                <option value="Georgia">Georgia</option>
-                <option value="Helvetica">Helvetica</option>
-            </select>
-            <div id="font-preview" class="font-preview">Aa</div>
-            
-            <input id="font-color" type="color" class="toolbar-color" value="#d60000" />
-        </div>
-        <div class="toolbar-row">
-            <button id="bold-btn" class="toolbar-btn">B</button>
-            <button id="italic-btn" class="toolbar-btn">I</button>
-            <select id="text-align" class="toolbar-select">
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
-            </select>
-        </div>
-
-        <!-- size controls removed (handled globally) -->
-    </div>
 </body>
 </html>
