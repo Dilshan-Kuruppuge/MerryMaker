@@ -1,68 +1,58 @@
-// Paste your same Firebase Config here
+// --- 1. FIREBASE CONFIGURATION ---
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
+    authDomain: "merrymaker-d166c.firebaseapp.com",
+    projectId: "merrymaker-d166c",
+    storageBucket: "merrymaker-d166c.firebasestorage.app",
+    messagingSenderId: "Y248467205664",
+    appId: "Y1:248467205664:web:5976ce50704ed93dd09645"
 };
 
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Initialize the non-interactive canvas
+// --- 2. CANVAS INITIALIZATION ---
+const wrapper = document.getElementById('wrapper');
 const canvas = new fabric.StaticCanvas('viewCanvas', {
-    width: 350, // Matches your editor container size
-    height: 450,
+    width: wrapper.clientWidth,
+    height: wrapper.clientHeight,
     backgroundColor: 'white'
 });
 
-// view/script.js
-
-
+// --- 3. LOADING LOGIC ---
 async function loadDesign() {
     const urlParams = new URLSearchParams(window.location.search);
     const designId = urlParams.get('id');
 
-    if (!designId) return;
+    if (!designId) {
+        console.error("Design ID not found in URL.");
+        return;
+    }
 
     try {
         const doc = await db.collection("designs").doc(designId).get();
         
         if (doc.exists) {
-            let designData = doc.data().data;
+            const rawData = doc.data().data;
 
-            // 1. Correct the image paths so the viewer can find the /assets folder
-            let jsonString = JSON.stringify(designData);
-            jsonString = jsonString.replaceAll('assets/', '../assets/');
-            const correctedData = JSON.parse(jsonString);
+            // Correct asset paths from 'assets/' to '../assets/' for subfolder viewing
+            let jsonString = JSON.stringify(rawData);
+            jsonString = jsonString.split('assets/').join('../assets/');
+            const finalData = JSON.parse(jsonString);
 
-            // 2. Load with a callback and force a render
-            canvas.loadFromJSON(correctedData, function() {
-                // This function runs only AFTER the JSON is fully parsed
-                
-                // Force all images to be requested and rendered
-                canvas.renderAll(); 
-
-                // 3. Safety: Wait for image "load" events if any exist
-                const objects = canvas.getObjects('image');
-                if (objects.length > 0) {
-                    let loadedCount = 0;
-                    objects.forEach(img => {
-                        img.on('load', () => {
-                            loadedCount++;
-                            if (loadedCount === objects.length) {
-                                canvas.renderAll();
-                            }
-                        });
-                    });
-                }
-                
-                console.log("Extraction complete and display forced.");
+            // Load and render
+            canvas.loadFromJSON(finalData, function() {
+                canvas.renderAll();
+                console.log("Design rendered successfully.");
             });
+        } else {
+            console.error("No design found with ID:", designId);
         }
-    } catch (e) {
-        console.error("Firebase extraction failed:", e);
+    } catch (error) {
+        console.error("Error fetching from Firebase:", error);
     }
 }
+
+// Trigger load when the window is fully ready
+window.addEventListener('load', loadDesign);
