@@ -332,3 +332,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 });
+
+
+
+
+// Function to export canvas to JSON
+function exportCanvasJSON() {
+    const canvasJSON = JSON.stringify(canvas.toJSON());
+    console.log("Exported JSON:", canvasJSON);
+    
+    // You can also trigger a download of a .json file
+    const blob = new Blob([canvasJSON], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "merry-maker-design.json";
+    link.click();
+}
+
+
+function importCanvasJSON(jsonInput) {
+    canvas.loadFromJSON(jsonInput, function() {
+        canvas.renderAll();
+        console.log("Canvas restored!");
+    });
+}
