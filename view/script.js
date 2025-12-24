@@ -1,4 +1,4 @@
-// --- 1. FIREBASE CONFIGURATION ---
+// --- 1. FIREBASE CONFIG (Kept from original) ---
 const firebaseConfig = {
     apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
     authDomain: "merrymaker-d166c.firebaseapp.com",
@@ -8,11 +8,10 @@ const firebaseConfig = {
     appId: "Y1:248467205664:web:5976ce50704ed93dd09645"
 };
 
-// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// --- 2. CANVAS INITIALIZATION ---
+// --- 2. CANVAS SETUP ---
 const wrapper = document.getElementById('wrapper');
 const canvas = new fabric.StaticCanvas('viewCanvas', {
     width: wrapper.clientWidth,
@@ -20,26 +19,50 @@ const canvas = new fabric.StaticCanvas('viewCanvas', {
     backgroundColor: 'white'
 });
 
-// --- 3. LOADING LOGIC ---
-async function loadDesign() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const designId = urlParams.get('id');
-
+// --- 3. CINEMATIC LOGIC ---
+async function preFetchDesign() {
+    const designId = new URLSearchParams(window.location.search).get('id');
     if (!designId) return;
 
     try {
         const doc = await db.collection("designs").doc(designId).get();
         if (doc.exists) {
-            const finalData = doc.data().data; // Data now contains absolute paths
-
-            canvas.loadFromJSON(finalData, function() {
+            canvas.loadFromJSON(doc.data().data, function() {
                 canvas.renderAll();
-                console.log("Design rendered with absolute paths!");
+                console.log("Card ready in background..."); // Clever Trick: Pre-renders here
             });
         }
-    } catch (error) {
-        console.error("Error loading design:", error);
-    }
+    } catch (e) { console.error("Load failed", e); }
 }
-// Trigger load when the window is fully ready
-window.addEventListener('load', loadDesign);
+
+function animateOpen() {
+    const overlay = document.getElementById('openingOverlay');
+    const envelope = document.getElementById('envelopeWrapper');
+    const stage = document.getElementById('cardStage');
+
+    // Step 1: Open the flap and slide letter
+    envelope.classList.add('env-open');
+
+    // Step 2: Fade the entire overlay and reveal the card
+    setTimeout(() => {
+        overlay.style.opacity = '0';
+        overlay.style.transform = 'scale(1.2)';
+
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            stage.classList.remove('hidden');
+            
+            // Re-sync canvas dimensions for mobile
+            canvas.setDimensions({
+                width: wrapper.clientWidth,
+                height: wrapper.clientHeight
+            });
+            canvas.renderAll();
+            
+            // Final fade in
+            setTimeout(() => { stage.style.opacity = '1'; }, 50);
+        }, 800);
+    }, 1600); // Wait for flap/slide animation to finish
+}
+
+window.addEventListener('load', preFetchDesign);

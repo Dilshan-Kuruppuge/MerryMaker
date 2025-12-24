@@ -1,62 +1,112 @@
+:root {
+    --primary-red: #d42426;
+    --dark-red: #a81d1f;
+    --gold: #f1c40f;
+}
+
 body {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background-color: rgb(37, 37, 37);
-    font-family: sans-serif;
+    margin: 0; padding: 0;
+    background: #020205;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+    color: white;
+    font-size: 3vh;
 }
 
-.header {
-    height: 3vh; /* Matches your index.html */
-    width: 100%;
-    background-color: rgb(32, 28, 28);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+/* --- 1. Realistic Snowfall --- */
+.night-sky {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(ellipse at bottom, #1B2735 0%, #090A0F 100%);
+    z-index: -1;
 }
 
-.MerryMaker {
-    color: #ff3b30;
-    font-family: 'Mountains of Christmas', cursive;
-    font-size: 2vh; /* Matches your index.html */
-    margin: 0;
+.snow-layer {
+    position: absolute; top: -100%; left: 0; width: 100%; height: 200%;
+    background-image: 
+        radial-gradient(4px 4px at 50px 50px, #fff, transparent),
+        radial-gradient(6px 6px at 150px 150px, #fff, transparent),
+        radial-gradient(3px 3px at 300px 400px, #fff, transparent);
+    background-size: 400px 400px;
+    animation: snowFall linear infinite;
+}
+
+.layer1 { animation-duration: 10s; opacity: 0.8; }
+.layer2 { animation-duration: 15s; opacity: 0.5; background-size: 300px 300px; }
+.layer3 { animation-duration: 20s; opacity: 0.3; background-size: 500px 500px; }
+
+@keyframes snowFall {
+    from { transform: translateY(0); }
+    to { transform: translateY(50%); }
+}
+
+/* --- 2. 3D Envelope UI --- */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 100; transition: 1s ease-in-out;
+}
+
+.envelope-wrapper {
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+.envelope {
+    position: relative; width: 280px; height: 180px;
+    background: var(--primary-red);
+    transform-style: preserve-3d;
+    transition: transform 0.6s ease;
+}
+
+.flap {
+    position: absolute; top: 0; width: 0; height: 0;
+    border-left: 140px solid transparent; border-right: 140px solid transparent;
+    border-top: 100px solid var(--dark-red);
+    z-index: 5; transform-origin: top;
+    transition: transform 0.5s 0.3s ease;
+}
+
+.pocket {
+    position: absolute; bottom: 0; width: 100%; height: 100%;
+    background: var(--primary-red);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 50%, 0 0);
+    z-index: 4;
+}
+
+.letter {
+    position: absolute; bottom: 5px; left: 10px;
+    width: 260px; height: 160px;
+    background: white; z-index: 2;
+    transition: transform 0.7s 0.8s ease-in-out;
+    display: flex; justify-content: center; align-items: center; font-size: 40px;
+}
+
+/* Animation Triggered by JS */
+.env-open .flap { transform: rotateX(180deg); z-index: 1; }
+.env-open .letter { transform: translateY(-130px); }
+.env-open .envelope { transform: translateY(50px) rotate(-2deg); }
+
+.tap-hint {
+    color: white; font-family: 'Mountains of Christmas', cursive;
+    margin-top: 50px; font-size: 4vh;
+    text-shadow: 0 0 10px var(--gold);
+    animation: pulse 2s infinite;
+}
+
+/* --- 3. Stage (vh Sizing) --- */
+.stage {
+    display: flex; flex-direction: column; align-items: center;
+    width: 100%; height: 100vh;
+    transition: opacity 1s ease;
 }
 
 .canvas-container {
-    height: 70vh; /* Consistent scaling */
-    width: 55vh;
-    background-color: white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    margin-top: 20px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
+    height: 70vh; width: 55vh; /* exact vh scaling */
+    background: white; margin-top: 5vh;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
+    display: flex; justify-content: center; align-items: center;
 }
 
-.canvas-wrapper {
-    width: 100%;
-    height: 100%;
-}
+.hidden { display: none; opacity: 0; }
 
-.footer-area {
-    margin-top: 3vh;
-}
-
-.create-btn {
-    background-color: #ff3b30;
-    color: white;
-    border: none;
-    padding: 1.5vh 3vh;
-    border-radius: 5vh;
-    font-weight: bold;
-    font-size: 1.8vh;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.create-btn:hover {
-    transform: scale(1.05);
-}
+@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
