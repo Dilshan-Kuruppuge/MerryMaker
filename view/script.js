@@ -1,22 +1,33 @@
 // --- 1. FIREBASE CONFIG ---
-const firebaseConfig = {
-    apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
-    authDomain: "merrymaker-d166c.firebaseapp.com",
-    projectId: "merrymaker-d166c",
-    storageBucket: "merrymaker-d166c.firebasestorage.app",
-    messagingSenderId: "Y248467205664",
-    appId: "Y1:248467205664:web:5976ce50704ed93dd09645"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+if (typeof firebaseInitialized === 'undefined') {
+    var firebaseConfig = {
+        apiKey: "AIzaSyACiwtOKlf5E02_7gk4tOjJr6gvqcPD7qw",
+        authDomain: "merrymaker-d166c.firebaseapp.com",
+        projectId: "merrymaker-d166c",
+        storageBucket: "merrymaker-d166c.firebasestorage.app",
+        messagingSenderId: "Y248467205664",
+        appId: "Y1:248467205664:web:5976ce50704ed93dd09645"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.firestore();
+    var firebaseInitialized = true;
+}
 
-// --- 2. CANVAS INIT ---
-const wrapper = document.getElementById('wrapper');
-const canvas = new fabric.StaticCanvas('viewCanvas', {
-    width: wrapper.clientWidth,
-    height: wrapper.clientHeight,
-    backgroundColor: 'white'
-});
+var canvas;
+
+// --- 2. INITIALIZATION ---
+window.onload = function() {
+    const wrapper = document.getElementById('wrapper');
+    if (wrapper) {
+        canvas = new fabric.StaticCanvas('viewCanvas', {
+            width: wrapper.clientWidth,
+            height: wrapper.clientHeight,
+            backgroundColor: 'white'
+        });
+        loadDesign(); 
+    }
+    initSnow();
+};
 
 // --- 3. UI INTERACTION ---
 function openEnvelope() {
@@ -24,20 +35,19 @@ function openEnvelope() {
     const envContainer = document.getElementById('envelopeContainer');
     const designWrapper = document.getElementById('wrapper');
 
-    // 1. Open the flap
-    env.classList.add('is-open');
+    if (env) env.classList.add('is-open');
     
-    // 2. Fade envelope and show canvas
-    // We reduced the delay here to make it feel more responsive
     setTimeout(() => {
-        envContainer.classList.add('is-faded');
-        designWrapper.classList.add('canvas-visible');
+        if (envContainer) envContainer.classList.add('is-faded');
+        if (designWrapper) designWrapper.classList.add('canvas-visible');
+        
+        // This starts the global refresh
+        renderLoop();
     }, 600);
 }
 
-// --- 4. PRE-LOADING LOGIC ---
+// --- 4. PRE-LOADING & GIF ENGINE ---
 async function loadDesign() {
-    console.log("Background loading started...");
     const urlParams = new URLSearchParams(window.location.search);
     const designId = urlParams.get('id');
     if (!designId) return;
@@ -47,37 +57,69 @@ async function loadDesign() {
         if (doc.exists) {
             const finalData = doc.data().data;
 
-            // Render to the hidden canvas in the background
+            // Use the callback to ensure objects exist before we animate them
             canvas.loadFromJSON(finalData, function() {
+                canvas.getObjects().forEach(obj => {
+                    if (obj.type === 'image' && obj.src && obj.src.toLowerCase().endsWith('.gif')) {
+                        playGifOnCanvas(obj);
+                    }
+                });
                 canvas.renderAll();
-                console.log("Design pre-loaded and ready!");
             });
         }
-    } catch (e) { 
-        console.error("Error pre-loading:", e); 
+    } catch (e) { console.error("Firebase Load Error:", e); }
+}
+
+function playGifOnCanvas(fabricObj) {
+    // Create a virtual canvas for this specific GIF
+    const gifCanvas = document.createElement('canvas');
+    
+    // gifler creates an animator instance
+    gifler(fabricObj.src).frames(gifCanvas, (ctx, frame) => {
+        // Set dimensions to match the GIF frame
+        gifCanvas.width = frame.width;
+        gifCanvas.height = frame.height;
+        
+        // Draw the current frame
+        ctx.drawImage(frame.buffer, 0, 0);
+        
+        // Update the Fabric object to use this virtual canvas as its source
+        fabricObj.setElement(gifCanvas);
+        
+        // IMPORTANT: Tell Fabric this object needs to be repainted
+        fabricObj.dirty = true;
+    });
+}
+
+// Global loop: This is what makes the "StaticCanvas" actually animate
+function renderLoop() {
+    if (canvas) {
+        canvas.renderAll();
+        requestAnimationFrame(renderLoop);
     }
 }
 
-// Start loading assets the moment the script executes
-loadDesign();
-
-// --- 5. SNOW ENGINE (Keep existing logic) ---
-const snowCanvas = document.getElementById('snowCanvas');
-const ctx = snowCanvas.getContext('2d');
-let particles = [];
-
-function resizeSnow() {
-    snowCanvas.width = window.innerWidth;
-    snowCanvas.height = window.innerHeight;
+// --- 5. SNOW ENGINE (Unchanged) ---
+var snowCanvas, sCtx, particles = [];
+function initSnow() {
+    snowCanvas = document.getElementById('snowCanvas');
+    if (!snowCanvas) return;
+    sCtx = snowCanvas.getContext('2d');
+    resizeSnow();
+    for(let i = 0; i < 100; i++) particles.push(new Snowflake());
+    animateSnow();
 }
-window.addEventListener('resize', resizeSnow);
-resizeSnow();
-
+function resizeSnow() {
+    if (snowCanvas) {
+        snowCanvas.width = window.innerWidth;
+        snowCanvas.height = window.innerHeight;
+    }
+}
 class Snowflake {
     constructor() { this.reset(); }
     reset() {
-        this.x = Math.random() * snowCanvas.width;
-        this.y = Math.random() * snowCanvas.height;
+        this.x = Math.random() * (snowCanvas ? snowCanvas.width : 500);
+        this.y = Math.random() * -50;
         this.size = Math.random() * 3 + 1;
         this.speed = Math.random() * 1 + 0.5;
         this.velX = Math.random() * 0.5 - 0.25;
@@ -85,21 +127,20 @@ class Snowflake {
     update() {
         this.y += this.speed;
         this.x += this.velX;
-        if (this.y > snowCanvas.height) this.y = -10;
+        if (snowCanvas && this.y > snowCanvas.height) this.reset();
     }
     draw() {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        if (!sCtx) return;
+        sCtx.fillStyle = "white";
+        sCtx.beginPath();
+        sCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        sCtx.fill();
     }
 }
-
-for(let i = 0; i < 100; i++) particles.push(new Snowflake());
-
 function animateSnow() {
-    ctx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
-    particles.forEach(p => { p.update(); p.draw(); });
+    if (sCtx && snowCanvas) {
+        sCtx.clearRect(0, 0, snowCanvas.width, snowCanvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+    }
     requestAnimationFrame(animateSnow);
 }
-animateSnow();

@@ -26,22 +26,45 @@ textBtn.addEventListener('click', addText);
 // CORE FUNCTIONS (User Requested)
 // ============================================
 
-// A. Function to add ANY Image by file path
+
+// A. Function to add ANY Image (including animated GIFs)
+
+function startAnimation() {
+    fabric.util.requestAnimFrame(function render() {
+        canvas.renderAll();
+        fabric.util.requestAnimFrame(render);
+    });
+}
+startAnimation(); // Start the loop immediately
+
+// 2. Updated function to add GIFs
+
 function addImgObject(filePath) {
-    fabric.Image.fromURL(filePath, function(img) {
-        img.scaleToWidth(100);
-        img.set({
+    const imgElement = document.createElement('img');
+    imgElement.src = filePath;
+    // Important: No 'anonymous' if you are testing locally, but keep it for Firebase
+    imgElement.crossOrigin = "anonymous"; 
+
+    imgElement.onload = function() {
+        const fabricImage = new fabric.Image(imgElement, {
             left: canvas.width / 2 - 50,
             top: canvas.height / 2 - 50,
-            // Add these to help with hosting/CORS
-            crossOrigin: 'anonymous' 
+            objectCaching: false // CRITICAL: This stops Fabric from taking a "static photo"
         });
-        canvas.add(img);
-        canvas.setActiveObject(img);
-    }, { crossOrigin: 'anonymous' }); // Critical for hosted environments
+
+        fabricImage.scaleToWidth(150);
+        canvas.add(fabricImage);
+        canvas.setActiveObject(fabricImage);
+
+        // This loop forces the canvas to pull the next GIF frame from the imgElement
+        fabric.util.requestAnimFrame(function render() {
+            if (canvas.contains(fabricImage)) {
+                canvas.renderAll();
+                fabric.util.requestAnimFrame(render);
+            }
+        });
+    };
 }
-
-
 // B. Function to add Text
 function addText() {
     const text = new fabric.IText('Merry Xmas', {
@@ -267,7 +290,6 @@ async function openStickerModal() {
 
         // We only want images (png, jpg, svg) and we ignore everything else
         STICKER_FILES = files
-            .filter(file => file.name.match(/\.(png|jpg|jpeg|svg|webp)$/i))
             .map(file => file.name);
 
         renderStickers(STICKER_FILES);
