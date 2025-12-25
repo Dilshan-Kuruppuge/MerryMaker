@@ -4,10 +4,15 @@ const container = document.querySelector('.canvas-container');
 const canvas = new fabric.Canvas('c', {
     width: container.clientWidth,
     height: container.clientHeight,
-    backgroundColor: 'white'
+    backgroundColor: 'white',
+    // FIX: This stops objects from jumping to the front when clicked
+    // This solves "Text goes under anything clicked"
+    preserveObjectStacking: true, 
+    // FIX: This helps with selecting items when they overlap closely
+    selection: true 
 });
 
-// Handle window resizing (optional, keeps canvas 1:1 with container)
+// Handle window resizing
 window.addEventListener('resize', () => {
     canvas.setDimensions({
         width: container.clientWidth,
@@ -92,7 +97,6 @@ function addText() {
         fontFamily: "'Mountains of Christmas', cursive",
         fill: '#000000',
         fontSize: 40,
-        // Styling the handles
         cornerColor: 'white',
         cornerStrokeColor: 'gray',
         borderColor: 'gray',
@@ -100,8 +104,10 @@ function addText() {
     });
     canvas.add(text);
     canvas.setActiveObject(text);
+    
+    // ADD THIS: Ensure text is brought to front immediately upon creation
+    canvas.bringToFront(text); 
 }
-
 // ============================================
 // STYLING FUNCTIONS (Call these from anywhere)
 // ============================================
@@ -482,7 +488,8 @@ async function loadSharedDesign() {
 // Call this at the very bottom of your script.js
 loadSharedDesign();
 
-
+// Ensure UI is in correct state on load
+resetUI();
 
 
 // ============================================

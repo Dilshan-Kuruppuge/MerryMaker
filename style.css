@@ -92,13 +92,14 @@ canvas {
 
 }
 
-.text_editor{
+.text_editor {
     height: 9vh;
     width: 100%;
 
     background-color: rgb(22, 22, 22);
 
-    display: flex;
+    /* CHANGE: Start hidden, JS will show it when text is clicked */
+    display: none; 
     align-items: center;
     flex-direction: row;
     justify-content: center;
