@@ -56,7 +56,8 @@ body{
 }
 
 canvas {
-    image-rendering: -webkit-optimize-contrast; /* Keeps GIFs sharp */
+    /* Helps GIFs look sharp on mobile and desktop */
+    image-rendering: -webkit-optimize-contrast; 
     image-rendering: crisp-edges;
 }
 
@@ -235,14 +236,16 @@ canvas {
 /* Update this in style.css */
 .sticker-item {
     width: 100%;
-    height: 12vh; /* Use vh for scaling */
-    object-fit: contain; /* Prevents stretching */
+    height: 12vh; 
+    object-fit: contain;
     cursor: pointer;
     transition: transform 0.2s;
     border-radius: 1vh;
     background: #333;
     padding: 0.5vh;
-    display: block; /* Ensures visibility on iOS/Android */
+
+    will-change: transform;
+    transform: translateZ(0); /* Forces Hardware Acceleration */
 }
 
 .sticker-item:hover {

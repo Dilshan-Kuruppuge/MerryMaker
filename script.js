@@ -22,49 +22,46 @@ const stickerBtn = document.querySelectorAll('.add_buttons')[1];
 textBtn.addEventListener('click', addText);
 
 
+
 // ============================================
-// CORE FUNCTIONS (User Requested)
+// CORE FUNCTIONS (Fixed for Animated GIFs)
 // ============================================
 
-
-// A. Function to add ANY Image (including animated GIFs)
-
-function startAnimation() {
-    fabric.util.requestAnimFrame(function render() {
-        canvas.renderAll();
-        fabric.util.requestAnimFrame(render);
-    });
+// 1. ONE Global Render Loop (Remove all other startAnimation functions)
+function animate() {
+    canvas.renderAll();
+    fabric.util.requestAnimFrame(animate);
 }
-startAnimation(); // Start the loop immediately
+animate(); 
 
-// 2. Updated function to add GIFs
-
+// 2. Optimized Image/GIF Function
 function addImgObject(filePath) {
     const imgElement = document.createElement('img');
     imgElement.src = filePath;
-    // Important: No 'anonymous' if you are testing locally, but keep it for Firebase
     imgElement.crossOrigin = "anonymous"; 
 
     imgElement.onload = function() {
         const fabricImage = new fabric.Image(imgElement, {
-            left: canvas.width / 2 - 50,
-            top: canvas.height / 2 - 50,
-            objectCaching: false // CRITICAL: This stops Fabric from taking a "static photo"
+            left: canvas.width / 2 - 75,
+            top: canvas.height / 2 - 75,
+            cornerColor: 'white',
+            cornerStrokeColor: 'gray',
+            transparentCorners: false,
+            borderColor: 'gray',
+            cornerSize: 8,
+            // CRITICAL: Disable caching so Fabric doesn't "freeze" the frame
+            objectCaching: false 
         });
 
+        // The Secret Trick: Force the element to refresh its texture from the <img>
+        fabricImage.on('removed', () => { /* Clean up if needed */ });
+        
         fabricImage.scaleToWidth(150);
         canvas.add(fabricImage);
         canvas.setActiveObject(fabricImage);
-
-        // This loop forces the canvas to pull the next GIF frame from the imgElement
-        fabric.util.requestAnimFrame(function render() {
-            if (canvas.contains(fabricImage)) {
-                canvas.renderAll();
-                fabric.util.requestAnimFrame(render);
-            }
-        });
     };
 }
+
 // B. Function to add Text
 function addText() {
     const text = new fabric.IText('Merry Xmas', {
