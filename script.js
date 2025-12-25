@@ -506,15 +506,23 @@ async function openTemplateModal() {
         const response = await fetch('https://api.github.com/repos/Dilshan-Kuruppuge/MerryMaker/contents/template');
         const files = await response.json();
 
-        // Only show PNGs
-        const pngFiles = files.filter(file => file.name.endsWith('.png'));
+        // UPDATED: Filter for most common image files (png, jpg, jpeg, webp)
+        const imageFiles = files.filter(file => {
+            const name = file.name.toLowerCase();
+            return name.endsWith('.png') || 
+                   name.endsWith('.jpg') || 
+                   name.endsWith('.jpeg') || 
+                   name.endsWith('.webp');
+        });
         
         grid.innerHTML = ''; 
-        pngFiles.forEach(file => {
-            const nameOnly = file.name.replace('.png', '');
+        imageFiles.forEach(file => {
+            // Remove the extension to get the base name for the JSON file
+            const nameOnly = file.name.substring(0, file.name.lastIndexOf('.'));
             const img = document.createElement('img');
             img.src = `template/${file.name}`;
             img.className = 'sticker-item';
+            // Click triggers loading the corresponding JSON
             img.onclick = () => loadTemplateJSON(nameOnly);
             grid.appendChild(img);
         });
@@ -522,7 +530,6 @@ async function openTemplateModal() {
         grid.innerHTML = '<p style="color:red;">Error loading templates.</p>';
     }
 }
-
 async function loadTemplateJSON(templateName) {
     try {
         const response = await fetch(`template/${templateName}.json`);
