@@ -27,40 +27,67 @@ textBtn.addEventListener('click', addText);
 // CORE FUNCTIONS (Fixed for Animated GIFs)
 // ============================================
 
-// 1. ONE Global Render Loop (Remove all other startAnimation functions)
-function animate() {
-    canvas.renderAll();
-    fabric.util.requestAnimFrame(animate);
-}
-animate(); 
-
-// 2. Optimized Image/GIF Function
 function addImgObject(filePath) {
-    const imgElement = document.createElement('img');
-    imgElement.src = filePath;
-    imgElement.crossOrigin = "anonymous"; 
+    const isGif = filePath.toLowerCase().endsWith('.gif');
 
-    imgElement.onload = function() {
-        const fabricImage = new fabric.Image(imgElement, {
-            left: canvas.width / 2 - 75,
-            top: canvas.height / 2 - 75,
-            cornerColor: 'white',
-            cornerStrokeColor: 'gray',
-            transparentCorners: false,
-            borderColor: 'gray',
-            cornerSize: 8,
-            // CRITICAL: Disable caching so Fabric doesn't "freeze" the frame
-            objectCaching: false 
-        });
+    if (!isGif) {
+        fabric.Image.fromURL(filePath, function(img) {
+            img.scaleToWidth(150);
+            canvas.add(img);
+            canvas.renderAll();
+        }, { crossOrigin: 'anonymous' });
+        return;
+    }
 
-        // The Secret Trick: Force the element to refresh its texture from the <img>
-        fabricImage.on('removed', () => { /* Clean up if needed */ });
-        
-        fabricImage.scaleToWidth(150);
-        canvas.add(fabricImage);
-        canvas.setActiveObject(fabricImage);
-    };
+    // --- GIF PROXY LOGIC (Outline Removed) ---
+
+    const proxy = new fabric.Rect({
+        left: canvas.width / 2 - 75,
+        top: canvas.height / 2 - 75,
+        width: 150,
+        height: 150,
+        fill: 'rgba(0,0,0,0)', 
+        strokeWidth: 0,        // This removes the outline completely
+        selectable: true,
+        cornerColor: 'white',
+        cornerStrokeColor: 'gray',
+        transparentCorners: false,
+        cornerSize: 8,
+        hasRotatingPoint: true
+    });
+
+    const gifEl = document.createElement('img');
+    gifEl.src = filePath;
+    gifEl.style.position = 'absolute';
+    gifEl.style.pointerEvents = 'none'; 
+    gifEl.style.zIndex = '10';
+    container.appendChild(gifEl); 
+
+    canvas.add(proxy);
+    canvas.setActiveObject(proxy);
+
+    function syncGif() {
+        if (!canvas.contains(proxy)) {
+            gifEl.remove(); 
+            return;
+        }
+
+        const boundingRect = proxy.getBoundingRect();
+        const zoom = canvas.getZoom();
+
+        gifEl.style.width = (proxy.getScaledWidth() * zoom) + 'px';
+        gifEl.style.height = (proxy.getScaledHeight() * zoom) + 'px';
+        gifEl.style.left = boundingRect.left + 'px';
+        gifEl.style.top = boundingRect.top + 'px';
+        gifEl.style.transform = `rotate(${proxy.angle}deg)`;
+    }
+
+    canvas.on('after:render', syncGif);
+    proxy.on('moving', syncGif);
+    proxy.on('scaling', syncGif);
+    proxy.on('rotating', syncGif);
 }
+
 
 // B. Function to add Text
 function addText() {

@@ -35,17 +35,17 @@ body{
 
 
 .canvas-container {
+    position: relative; /* CRITICAL for the GIF overlay */
     height: 70vh;
     width: 55vh;
-    margin: 0px;
     background-color: white;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
     margin-top: 20px;
     margin-bottom: 20px;
+}
+
+.canvas-container img {
+    pointer-events: none;
+    user-select: none;
 }
 
 .canvas-item{
