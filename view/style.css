@@ -90,6 +90,12 @@ body {
 
 /* Canvas UI */
 .canvas-wrapper {
+    position: relative; /* CRITICAL: Anchors the floating GIFs */
+    width: 50vh;
+    height: 70vh;
+    background: white;
+
+
     width: 50vh;
     height: 70vh;
     background: white;
@@ -101,6 +107,12 @@ body {
     /* Faster scaling transition for a "pop" feel */
     transition: opacity 0.8s 0.6s, transform 1s 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
+.canvas-wrapper img {
+    opacity: 0;
+    transition: opacity 0.8s 0.6s;
+}
+
 /* Interaction Classes */
 .is-open .flap {
     transform: rotateX(160deg);
@@ -115,6 +127,10 @@ body {
 .canvas-visible {
     opacity: 1;
     transform: scale(1) translateY(0);
+}
+
+.canvas-visible img {
+    opacity: 1;
 }
 
 .instruction {

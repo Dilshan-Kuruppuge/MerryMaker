@@ -46,7 +46,8 @@ function openEnvelope() {
     }, 600);
 }
 
-// --- 4. PRE-LOADING & GIF ENGINE ---
+
+// --- 4. PRE-LOADING & HYBRID GIF ENGINE ---
 async function loadDesign() {
     const urlParams = new URLSearchParams(window.location.search);
     const designId = urlParams.get('id');
@@ -57,11 +58,11 @@ async function loadDesign() {
         if (doc.exists) {
             const finalData = doc.data().data;
 
-            // Use the callback to ensure objects exist before we animate them
             canvas.loadFromJSON(finalData, function() {
+                // Find all GIFs and replace them with "Hybrid" versions
                 canvas.getObjects().forEach(obj => {
                     if (obj.type === 'image' && obj.src && obj.src.toLowerCase().endsWith('.gif')) {
-                        playGifOnCanvas(obj);
+                        createFloatingGif(obj);
                     }
                 });
                 canvas.renderAll();
@@ -69,6 +70,45 @@ async function loadDesign() {
         }
     } catch (e) { console.error("Firebase Load Error:", e); }
 }
+
+function createFloatingGif(proxy) {
+    // 1. Create the ACTUAL GIF element in the HTML
+    const gifEl = document.createElement('img');
+    gifEl.src = proxy.src;
+    gifEl.style.position = 'absolute';
+    gifEl.style.pointerEvents = 'none'; // Clicks pass through
+    gifEl.style.zIndex = '10';
+    
+    // Add to the same wrapper that contains the canvas
+    const wrapper = document.getElementById('wrapper');
+    wrapper.appendChild(gifEl);
+
+    // 2. Hide the original "frozen" image on the canvas
+    proxy.set({ opacity: 0 });
+
+    // 3. Sync Function: Maps the GIF position to the proxy's position
+    function sync() {
+        if (!canvas.contains(proxy)) {
+            gifEl.remove();
+            return;
+        }
+
+        // Get actual pixel coordinates from the canvas
+        const boundingRect = proxy.getBoundingRect();
+        
+        gifEl.style.width = proxy.getScaledWidth() + 'px';
+        gifEl.style.height = proxy.getScaledHeight() + 'px';
+        gifEl.style.left = boundingRect.left + 'px';
+        gifEl.style.top = boundingRect.top + 'px';
+        gifEl.style.transform = `rotate(${proxy.angle}deg)`;
+    }
+
+    // Since the viewer doesn't move objects, we only need to sync once 
+    // or on window resize
+    sync();
+    window.addEventListener('resize', sync);
+}
+
 
 function playGifOnCanvas(fabricObj) {
     // Create a virtual canvas for this specific GIF
