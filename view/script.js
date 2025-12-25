@@ -72,40 +72,30 @@ async function loadDesign() {
 }
 
 function createFloatingGif(proxy) {
-    // 1. Create the ACTUAL GIF element in the HTML
     const gifEl = document.createElement('img');
     gifEl.src = proxy.src;
     gifEl.style.position = 'absolute';
-    gifEl.style.pointerEvents = 'none'; // Clicks pass through
+    gifEl.style.pointerEvents = 'none';
     gifEl.style.zIndex = '10';
     
-    // Add to the same wrapper that contains the canvas
     const wrapper = document.getElementById('wrapper');
     wrapper.appendChild(gifEl);
-
-    // 2. Hide the original "frozen" image on the canvas
     proxy.set({ opacity: 0 });
 
-    // 3. Sync Function: Maps the GIF position to the proxy's position
     function sync() {
-        if (!canvas.contains(proxy)) {
-            gifEl.remove();
-            return;
-        }
-
-        // Get actual pixel coordinates from the canvas
-        const boundingRect = proxy.getBoundingRect();
+        // Use getBoundingRect relative to the canvas viewport
+        const rect = proxy.getBoundingRect();
         
-        gifEl.style.width = proxy.getScaledWidth() + 'px';
-        gifEl.style.height = proxy.getScaledHeight() + 'px';
-        gifEl.style.left = boundingRect.left + 'px';
-        gifEl.style.top = boundingRect.top + 'px';
-        gifEl.style.transform = `rotate(${proxy.angle}deg)`;
+        gifEl.style.width = (proxy.getScaledWidth()) + 'px';
+        gifEl.style.height = (proxy.getScaledHeight()) + 'px';
+        gifEl.style.left = rect.left + 'px';
+        gifEl.style.top = rect.top + 'px';
     }
 
-    // Since the viewer doesn't move objects, we only need to sync once 
-    // or on window resize
-    sync();
+    // Call sync multiple times during the opening animation to prevent drifting
+    let syncInterval = setInterval(sync, 10); 
+    setTimeout(() => clearInterval(syncInterval), 2000); // Stop syncing after animation ends
+    
     window.addEventListener('resize', sync);
 }
 

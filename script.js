@@ -26,7 +26,6 @@ textBtn.addEventListener('click', addText);
 // ============================================
 // CORE FUNCTIONS (Fixed for Animated GIFs)
 // ============================================
-
 function addImgObject(filePath) {
     const isGif = filePath.toLowerCase().endsWith('.gif');
 
@@ -39,21 +38,20 @@ function addImgObject(filePath) {
         return;
     }
 
-    // --- GIF PROXY LOGIC (Outline Removed) ---
-
     const proxy = new fabric.Rect({
         left: canvas.width / 2 - 75,
         top: canvas.height / 2 - 75,
         width: 150,
         height: 150,
         fill: 'rgba(0,0,0,0)', 
-        strokeWidth: 0,        // This removes the outline completely
+        strokeWidth: 0,
         selectable: true,
         cornerColor: 'white',
         cornerStrokeColor: 'gray',
         transparentCorners: false,
         cornerSize: 8,
-        hasRotatingPoint: true
+        hasRotatingPoint: true,
+        gifSrc: filePath // Properly added here
     });
 
     const gifEl = document.createElement('img');
@@ -71,10 +69,8 @@ function addImgObject(filePath) {
             gifEl.remove(); 
             return;
         }
-
         const boundingRect = proxy.getBoundingRect();
         const zoom = canvas.getZoom();
-
         gifEl.style.width = (proxy.getScaledWidth() * zoom) + 'px';
         gifEl.style.height = (proxy.getScaledHeight() * zoom) + 'px';
         gifEl.style.left = boundingRect.left + 'px';
@@ -87,7 +83,6 @@ function addImgObject(filePath) {
     proxy.on('scaling', syncGif);
     proxy.on('rotating', syncGif);
 }
-
 
 // B. Function to add Text
 function addText() {
@@ -399,46 +394,38 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 // --- Share / Upload Logic ---
-
 async function shareDesign() {
-    // 1. Get the current canvas data as a JSON object
-    const canvasJSON = canvas.toJSON();
+    const canvasJSON = canvas.toJSON(['gifSrc']); // Ensure gifSrc is exported
     const shareModal = document.getElementById("shareModal");
     const shareInput = document.getElementById("shareURLInput");
-    
-    // 2. Convert relative sticker paths to absolute URLs
-    // Base URL of your hosted site
     const baseURL = "https://dilshan-kuruppuge.github.io/MerryMaker/";
 
     if (canvasJSON.objects) {
         canvasJSON.objects.forEach(obj => {
-            // Check if it's an image and has a relative 'src' starting with 'assets/'
             if (obj.type === 'image' && obj.src && obj.src.startsWith('assets/')) {
                 obj.src = baseURL + obj.src;
             }
-        });
-    }
-    
+            if (obj.type === 'rect' && obj.fill === 'rgba(0,0,0,0)' && obj.gifSrc) { 
+                obj.type = 'image';
+                obj.src = obj.gifSrc.startsWith('http') ? obj.gifSrc : baseURL + obj.gifSrc;
+            }
+        }); // Added missing closing for forEach
+    } // Added missing closing for IF
+
     try {
-        // 3. Save the modified JSON to Firebase
         const docRef = await db.collection("designs").add({
             data: canvasJSON,
             createdAt: new Date()
         });
 
-        // 4. Generate the Share URL pointing to the viewer
         const shareURL = window.location.origin + window.location.pathname.replace('index.html', '') + "view/view.html?id=" + docRef.id;
-
-        // 5. Show the Popup
         shareInput.value = shareURL;
         shareModal.style.display = "block";
-        
     } catch (error) {
         console.error("Error saving design: ", error);
         alert("Failed to save design.");
     }
 }
-
 // Logic for the Copy Button and closing the modal
 document.addEventListener('DOMContentLoaded', () => {
     const copyBtn = document.getElementById("copyLinkBtn");
